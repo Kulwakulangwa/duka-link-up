@@ -1,0 +1,17 @@
+{
+  "buildCommand": "bun run build",
+  "outputDirectory": ".output/public",
+  "installCommand": "bun install",
+  "framework": null,
+  "functions": {
+    ".output/server/index.mjs": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/.output/server/index.mjs"
+    }
+  ]
+}
