@@ -3,6 +3,12 @@
   "outputDirectory": "dist/client",
   "installCommand": "bun install",
   "framework": null,
+  "functions": {
+    "api/index.js": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",
