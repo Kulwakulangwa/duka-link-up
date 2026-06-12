@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Loader2, Upload, X } from "lucide-react";
 import { sanitize, FREE_PRODUCT_LIMIT } from "@/lib/dukalink";
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 interface ProductFormProps {
@@ -31,41 +31,70 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Load shop and product data
   useEffect(() => {
     async function load() {
-      // 1. Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Not authenticated");
-        navigate({ to: "/" });
-        return;
-      }
+      try {
+        console.log("ProductForm load - mode:", mode, "productId:", productId);
 
-      // 2. Fetch the user's shop
-      const { data: shop } = await supabase
-        .from("shops")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        // 1. Get user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error("Not authenticated");
+          navigate({ to: "/" });
+          return;
+        }
 
-      if (!shop) {
-        toast.error("No shop found");
-        navigate({ to: "/dashboard" });
-        return;
-      }
-
-      setShopId(shop.id);
-
-      // 3. If editing, load the product's current details
-      if (mode === "edit" && productId) {
-        const { data: product } = await supabase
-          .from("products")
-          .select("*")
-          .eq("id", productId)
+        // 2. Get user's shop
+        const { data: shop, error: shopError } = await supabase
+          .from("shops")
+          .select("id")
+          .eq("user_id", user.id)
           .maybeSingle();
 
-        if (product) {
+        if (shopError) {
+          console.error("Shop fetch error:", shopError);
+          toast.error("Error loading shop");
+          navigate({ to: "/dashboard" });
+          return;
+        }
+
+        if (!shop) {
+          toast.error("No shop found. Please create a shop first.");
+          navigate({ to: "/dashboard" });
+          return;
+        }
+
+        setShopId(shop.id);
+
+        // 3. If edit mode, load product
+        if (mode === "edit") {
+          if (!productId) {
+            toast.error("No product ID provided");
+            navigate({ to: "/dashboard" });
+            return;
+          }
+
+          console.log("Fetching product with ID:", productId);
+          const { data: product, error: productError } = await supabase
+            .from("products")
+            .select("*")
+            .eq("id", productId)
+            .maybeSingle();
+
+          if (productError) {
+            console.error("Product fetch error:", productError);
+            toast.error("Failed to load product");
+            navigate({ to: "/dashboard" });
+            return;
+          }
+
+          if (!product) {
+            toast.error("Product not found");
+            navigate({ to: "/dashboard" });
+            return;
+          }
+
+          console.log("Product loaded:", product);
           setName(product.name);
           setPrice(String(product.price));
           setDescription(product.description ?? "");
@@ -74,28 +103,32 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           if (product.image_url) {
             setImagePreview(product.image_url);
           }
-        } else {
-          toast.error("Product not found");
-          navigate({ to: "/dashboard" });
-          return;
-        }
-      }
+        } else if (mode === "add") {
+          // Check product limit
+          const { count, error: countError } = await supabase
+            .from("products")
+            .select("id", { count: "exact", head: true })
+            .eq("shop_id", shop.id);
 
-      // 4. Check product limit for 'add' mode
-      if (mode === "add") {
-        const { count } = await supabase
-          .from("products")
-          .select("id", { count: "exact", head: true })
-          .eq("shop_id", shop.id);
+          if (countError) {
+            console.error("Count error:", countError);
+          }
 
-        if (count && count >= FREE_PRODUCT_LIMIT) {
-          toast.error(`Free plan limited to ${FREE_PRODUCT_LIMIT} products`);
-          navigate({ to: "/dashboard" });
-          return;
+          if ((count ?? 0) >= FREE_PRODUCT_LIMIT) {
+            toast.error(`Free plan limited to ${FREE_PRODUCT_LIMIT} products`);
+            navigate({ to: "/dashboard" });
+            return;
+          }
         }
+      } catch (err) {
+        console.error("Unexpected error in load:", err);
+        toast.error("Something went wrong loading the form");
+        navigate({ to: "/dashboard" });
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
+
     load();
   }, [mode, productId, navigate]);
 
@@ -178,7 +211,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
     setSaving(false);
     if (error) {
-      console.error(error);
+      console.error("Submit error:", error);
       toast.error(`Failed to ${mode === "add" ? "add" : "update"} product`);
     } else {
       navigate({ to: "/dashboard" });
