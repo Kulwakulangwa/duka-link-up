@@ -37,27 +37,66 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
 
   useEffect(() => {
     (async () => {
-      const { data: shop } = await supabase.from("shops").select("id").maybeSingle();
-      
-      // ✅ FIX: Handle no shop case
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Not authenticated");
+        navigate({ to: "/" });
+        return;
+      }
+
+      // Fetch the user's shop
+      const { data: shop, error: shopError } = await supabase
+        .from("shops")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (shopError) {
+        console.error("Shop fetch error:", shopError);
+        toast.error("Error loading shop");
+        navigate({ to: "/dashboard" });
+        return;
+      }
+
       if (!shop) {
         toast.error("No shop found. Please create a shop first.");
         navigate({ to: "/dashboard" });
         return;
       }
-      
+
       setShopId(shop.id);
 
       if (mode === "add") {
-        const { count } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("shop_id", shop.id);
+        // Check product limit
+        const { count, error: countError } = await supabase
+          .from("products")
+          .select("id", { count: "exact", head: true })
+          .eq("shop_id", shop.id);
+
+        if (countError) {
+          console.error("Count error:", countError);
+        }
+
         if ((count ?? 0) >= FREE_PRODUCT_LIMIT) {
-          toast.error("Free plan is limited to 5 products");
+          toast.error(`Free plan is limited to ${FREE_PRODUCT_LIMIT} products`);
           navigate({ to: "/dashboard" });
           return;
         }
       } else if (id) {
-        const { data: p } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
-        if (!p) { toast.error("Product not found"); navigate({ to: "/dashboard" }); return; }
+        // Edit mode: load existing product
+        const { data: p, error: prodError } = await supabase
+          .from("products")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
+
+        if (prodError || !p) {
+          toast.error("Product not found");
+          navigate({ to: "/dashboard" });
+          return;
+        }
+
         const prod = p as any;
         setName(prod.name);
         setPrice(String(prod.price));
@@ -80,13 +119,12 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
-    // ✅ FIX: Check if shopId exists
+
     if (!shopId) {
       toast.error("No shop found. Please create a shop first.");
       return;
     }
-    
+
     const cleanName = sanitize(name, 100);
     const cleanDesc = sanitize(description, 500);
     const priceNum = parseFloat(price);
@@ -96,16 +134,30 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
     setSaving(true);
     let finalPath = imagePath;
 
+    // Upload new image if selected
     if (imageFile) {
       const { data: u } = await supabase.auth.getUser();
       const userId = u.user?.id;
-      if (!userId) { setSaving(false); return toast.error("Not signed in"); }
+      if (!userId) {
+        setSaving(false);
+        toast.error("Not signed in");
+        return;
+      }
       const ext = imageFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${userId}/products/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("shop-images").upload(path, imageFile, {
-        cacheControl: "3600", upsert: false, contentType: imageFile.type,
-      });
-      if (upErr) { setSaving(false); return toast.error("Image upload failed"); }
+      const { error: upErr } = await supabase.storage
+        .from("shop-images")
+        .upload(path, imageFile, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: imageFile.type,
+        });
+      if (upErr) {
+        console.error("Upload error:", upErr);
+        setSaving(false);
+        toast.error("Image upload failed: " + upErr.message);
+        return;
+      }
       finalPath = path;
     }
 
@@ -116,31 +168,50 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
       description: cleanDesc || null,
       in_stock: inStock,
       image_url: finalPath,
-    } as any;
+    };
 
     if (mode === "add") {
-      const { error } = await supabase.from("products").insert(payload);
-      if (error) { setSaving(false); return toast.error("Could not save"); }
+      const { error: insertError } = await supabase.from("products").insert(payload);
+      if (insertError) {
+        console.error("Insert error:", insertError);
+        setSaving(false);
+        toast.error("Could not save product: " + insertError.message);
+        return;
+      }
       toast.success("Product added");
     } else {
-      const { error } = await supabase.from("products").update(payload).eq("id", id!);
-      if (error) { setSaving(false); return toast.error("Could not save"); }
-      toast.success("Updated");
+      const { error: updateError } = await supabase
+        .from("products")
+        .update(payload)
+        .eq("id", id!);
+      if (updateError) {
+        console.error("Update error:", updateError);
+        setSaving(false);
+        toast.error("Could not update product: " + updateError.message);
+        return;
+      }
+      toast.success("Product updated");
     }
+
     setSaving(false);
     navigate({ to: "/dashboard" });
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+  }
 
   return (
     <main className="min-h-screen bg-background">
       <header className="px-5 py-4 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon"><Link to="/dashboard"><ArrowLeft className="size-5" /></Link></Button>
+          <Button asChild variant="ghost" size="icon">
+            <Link to="/dashboard"><ArrowLeft className="size-5" /></Link>
+          </Button>
           <h1 className="font-bold text-foreground">{mode === "add" ? "Add product" : "Edit product"}</h1>
         </div>
       </header>
+
       <form onSubmit={onSubmit} className="max-w-2xl mx-auto px-5 py-6 space-y-5">
         <div>
           <Label>Photo</Label>
@@ -148,14 +219,28 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
             {imagePreview ? (
               <div className="relative w-full aspect-square max-w-xs rounded-xl overflow-hidden bg-muted">
                 <img src={imagePreview} alt="" className="w-full h-full object-cover" />
-                <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }} className="absolute top-2 right-2 bg-background/90 rounded-full p-1.5"><X className="size-4" /></button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageFile(null);
+                    setImagePreview(null);
+                  }}
+                  className="absolute top-2 right-2 bg-background/90 rounded-full p-1.5"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
             ) : imagePath ? (
               <div className="relative w-full aspect-square max-w-xs rounded-xl overflow-hidden bg-muted">
                 <ProductImage path={imagePath} className="w-full h-full" />
                 <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white cursor-pointer opacity-0 hover:opacity-100 transition">
                   <Upload className="size-6" />
-                  <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={onPickImage} />
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={onPickImage}
+                  />
                 </label>
               </div>
             ) : (
@@ -165,7 +250,12 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
                   <p className="text-sm font-medium text-foreground">Upload photo</p>
                   <p className="text-xs text-muted-foreground mt-1">JPG, PNG or WebP · Max 10MB</p>
                 </div>
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={onPickImage} />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={onPickImage}
+                />
               </label>
             )}
           </div>
@@ -173,17 +263,42 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
 
         <div>
           <Label htmlFor="name">Product name</Label>
-          <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} className="h-12" maxLength={100} />
+          <Input
+            id="name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-12"
+            maxLength={100}
+          />
         </div>
 
         <div>
           <Label htmlFor="price">Price (TSh)</Label>
-          <Input id="price" type="number" required min="0" step="100" value={price} onChange={(e) => setPrice(e.target.value)} className="h-12" inputMode="numeric" />
+          <Input
+            id="price"
+            type="number"
+            required
+            min="0"
+            step="100"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            className="h-12"
+            inputMode="numeric"
+          />
         </div>
 
         <div>
-          <Label htmlFor="description">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
-          <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} rows={3} />
+          <Label htmlFor="description">
+            Description <span className="text-muted-foreground font-normal">(optional)</span>
+          </Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={500}
+            rows={3}
+          />
         </div>
 
         <div className="flex items-center justify-between rounded-lg border border-border p-4 bg-card">
