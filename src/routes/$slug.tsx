@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Store, MapPin, Clock, Phone, Share2, Check } from "lucide-react";
-import { formatTsh } from "@/lib/dukalink";
+import { formatTsh, normalizeWhatsApp } from "@/lib/dukalink";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/$slug")({
@@ -57,12 +57,14 @@ function ShopPage() {
           avatar_signed_url = signedUrl?.signedUrl || null;
         }
         setShop({ ...shopData, avatar_signed_url });
+
         const { data: productsData } = await supabase
           .from("products")
           .select("id, name, price, description, image_url, in_stock")
           .eq("shop_id", shopData.id)
           .eq("in_stock", true)
           .order("created_at", { ascending: false });
+
         const productsWithSigned = await Promise.all(
           (productsData || []).map(async (p: any) => {
             let image_signed_url = null;
@@ -97,15 +99,22 @@ function ShopPage() {
       toast.error("Shop WhatsApp number not set");
       return;
     }
-    let phone = shop.whatsapp_number;
-    if (!phone.startsWith("+")) {
-      if (phone.startsWith("0")) phone = `+255${phone.slice(1)}`;
-      else phone = `+255${phone}`;
+
+    // Use the same normalization function as in settings
+    let phone = normalizeWhatsApp(shop.whatsapp_number);
+    if (!phone) {
+      // Fallback: clean up the number manually
+      let raw = shop.whatsapp_number.replace(/\D/g, "");
+      if (raw.startsWith("0")) raw = "255" + raw.slice(1);
+      if (!raw.startsWith("255")) raw = "255" + raw;
+      phone = "+" + raw;
     }
-    let message = `Hello! I'm interested in products from ${shop.name}.`;
-    if (productName) {
-      message = `Hello! I'd like to order "${productName}" from ${shop.name}.`;
-    }
+    // Remove any spaces or dashes
+    phone = phone.replace(/\s+/g, "");
+
+    const message = productName
+      ? `Hello! I'd like to order "${productName}" from ${shop.name}.`
+      : `Hello! I'm interested in products from ${shop.name}.`;
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
