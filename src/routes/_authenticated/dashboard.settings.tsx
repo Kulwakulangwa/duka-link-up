@@ -62,6 +62,13 @@ function SettingsPage() {
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
+    
+    // ✅ FIX 1: Check if shop exists before proceeding
+    if (!shop || !shop.id) {
+      toast.error("No shop found. Please create a shop first.");
+      return;
+    }
+    
     if (slugChanged && slugStatus !== "ok") return toast.error("Pick an available link");
     if (slugChanged && !slugConfirm) return toast.error("Confirm the link change");
 
@@ -82,6 +89,7 @@ function SettingsPage() {
     if (slugChanged) updates.slug = slug;
 
     setSaving(true);
+    // ✅ FIX 2: Now shop.id is guaranteed to exist due to check above
     const { error } = await supabase.from("shops").update(updates).eq("id", shop.id);
     setSaving(false);
     if (error) return toast.error("Could not save");
@@ -90,6 +98,33 @@ function SettingsPage() {
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+
+  // ✅ FIX 3: Handle case when no shop exists (new user)
+  if (!shop) {
+    return (
+      <main className="min-h-screen bg-background">
+        <header className="px-5 py-4 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto flex items-center gap-3">
+            <Button asChild variant="ghost" size="icon">
+              <Link to="/dashboard"><ArrowLeft className="size-5" /></Link>
+            </Button>
+            <h1 className="font-bold text-foreground">Settings</h1>
+          </div>
+        </header>
+        <div className="max-w-2xl mx-auto px-5 py-12 text-center">
+          <div className="rounded-xl border border-border bg-card p-8">
+            <h2 className="text-2xl font-bold mb-4 text-foreground">No Shop Found</h2>
+            <p className="text-muted-foreground mb-6">
+              You haven't created a shop yet. Create your first shop to access settings.
+            </p>
+            <Button asChild className="w-full sm:w-auto">
+              <Link to="/dashboard">Go to Dashboard</Link>
+            </Button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background">
