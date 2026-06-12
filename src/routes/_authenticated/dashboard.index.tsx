@@ -11,6 +11,7 @@ import {
 import { Copy, ExternalLink, Plus, Settings, LogOut, Pencil, Trash2, Sparkles, Store } from "lucide-react";
 import { formatTsh, FREE_PRODUCT_LIMIT } from "@/lib/dukalink";
 import { ProductImage } from "@/components/ProductImage";
+import { ShopLinkCard } from "@/components/ShopLinkCard"; // 👈 import the new card
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   head: () => ({ meta: [{ title: "Dashboard — Dukalink" }] }),
@@ -127,6 +128,7 @@ function Dashboard() {
     );
   }
 
+  // Has shop → show full dashboard with the new ShopLinkCard
   return (
     <main className="min-h-screen bg-background">
       <header className="px-5 py-4 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10">
@@ -147,20 +149,9 @@ function Dashboard() {
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        {/* ✅ GREEN GRADIENT BACKGROUND RESTORED */}
-        <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
-          <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
-          <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
-          <div className="mt-4 flex gap-2">
-            <Button onClick={copyLink} variant="secondary" size="sm" className="flex-1 sm:flex-none">
-              <Copy className="size-4 mr-1.5" /> Copy
-            </Button>
-            <Button asChild variant="secondary" size="sm" className="flex-1 sm:flex-none">
-              <a href={shopUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="size-4 mr-1.5" /> Preview
-              </a>
-            </Button>
-          </div>
+        {/* 👇 NEW STYLISH SHOP LINK CARD - width and layout same as before */}
+        <div className="flex justify-center">
+          <ShopLinkCard url={shopUrl} label="Your shop link" />
         </div>
 
         {products.length === 0 ? (
