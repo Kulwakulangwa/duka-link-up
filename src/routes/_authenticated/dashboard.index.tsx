@@ -33,16 +33,21 @@ function Dashboard() {
   async function load() {
     const { data: shopRow } = await supabase.from("shops").select("id,slug,name").maybeSingle();
     setShop(shopRow as any);
-    if (shopRow) {
+    
+    // ✅ FIX: Only load products if shop exists
+    if (shopRow?.id) {
       const { data: prods } = await supabase
         .from("products")
         .select("id,name,price,image_url,in_stock,description")
-        .eq("shop_id", (shopRow as any).id)
+        .eq("shop_id", shopRow.id)
         .order("created_at", { ascending: false });
       setProducts((prods as any) ?? []);
+    } else {
+      setProducts([]);
     }
     setLoading(false);
   }
+  
   useEffect(() => { load(); }, []);
 
   const shopUrl = typeof window !== "undefined" && shop ? `${window.location.origin}/${shop.slug}` : "";
@@ -91,7 +96,7 @@ function Dashboard() {
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        {shop && (
+        {shop ? (
           <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
             <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
             <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
@@ -104,9 +109,19 @@ function Dashboard() {
               </Button>
             </div>
           </div>
+        ) : (
+          // ✅ FIX: Show "Create Shop" prompt when no shop exists
+          <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center bg-card">
+            <Store className="size-10 text-primary mx-auto mb-3" />
+            <h2 className="font-semibold text-lg text-foreground">Create Your Shop</h2>
+            <p className="text-muted-foreground text-sm mt-1 mb-5">Set up your shop to start selling products.</p>
+            <Button asChild size="lg" className="h-12 px-6 font-semibold">
+              <Link to="/dashboard/settings">Create Shop</Link>
+            </Button>
+          </div>
         )}
 
-        {products.length === 0 ? (
+        {shop && products.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center bg-card">
             <Sparkles className="size-10 text-primary mx-auto mb-3" />
             <h2 className="font-semibold text-lg text-foreground">Let's add your first product</h2>
@@ -115,7 +130,7 @@ function Dashboard() {
               <Link to="/dashboard/add"><Plus className="size-5 mr-1" /> Add your first product</Link>
             </Button>
           </div>
-        ) : (
+        ) : shop && (
           <>
             {products.length >= FREE_PRODUCT_LIMIT && (
               <div className="rounded-xl bg-warning/15 border border-warning/40 p-4">
