@@ -148,9 +148,8 @@ function Dashboard() {
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        <div className="flex justify-center">
-          <ShopLinkCard url={shopUrl} label="Your shop link" />
-        </div>
+        {/* ShopLinkCard now takes full width, matching the product limit card */}
+        <ShopLinkCard url={shopUrl} label="Your shop link" />
 
         {products.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center bg-card">
