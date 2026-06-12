@@ -31,22 +31,41 @@ function Dashboard() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   async function load() {
-    const { data: shopRow } = await supabase.from("shops").select("id,slug,name").maybeSingle();
+    // 1. Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // 2. Fetch shop owned by this user
+    const { data: shopRow } = await supabase
+      .from("shops")
+      .select("id,slug,name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
     setShop(shopRow as any);
+
     if (shopRow) {
+      // 3. Fetch products for this shop
       const { data: prods } = await supabase
         .from("products")
         .select("id,name,price,image_url,in_stock,description")
-        .eq("shop_id", (shopRow as any).id)
+        .eq("shop_id", shopRow.id)
         .order("created_at", { ascending: false });
       setProducts((prods as any) ?? []);
+    } else {
+      setProducts([]);
     }
     setLoading(false);
   }
-  
-  useEffect(() => { load(); }, []);
 
-  // ✅ NEW: Refresh data when window gets focus (after returning from create-shop)
+  useEffect(() => {
+    load();
+  }, []);
+
+  // Refresh data when window gains focus (e.g., after returning from create-shop)
   useEffect(() => {
     window.addEventListener('focus', load);
     return () => window.removeEventListener('focus', load);
@@ -82,7 +101,7 @@ function Dashboard() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
 
-  // ✅ NEW: Show "Create Shop" button when no shop exists (instead of crashing)
+  // No shop → show creation prompt
   if (!shop) {
     return (
       <main className="min-h-screen bg-background">
@@ -92,9 +111,9 @@ function Dashboard() {
               <Store className="size-5 text-primary shrink-0" />
               <h1 className="font-bold text-foreground">Duka Link Up</h1>
             </div>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="size-5" /></Button>
-            </div>
+            <Button variant="ghost" size="icon" onClick={signOut}>
+              <LogOut className="size-5" />
+            </Button>
           </div>
         </header>
         <div className="max-w-3xl mx-auto px-5 py-12">
@@ -113,37 +132,41 @@ function Dashboard() {
     );
   }
 
-  // ✅ Everything below is your original dashboard (Settings button, products, etc.) – unchanged
+  // Has shop → show full dashboard
   return (
     <main className="min-h-screen bg-background">
       <header className="px-5 py-4 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10">
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <Store className="size-5 text-primary shrink-0" />
-            <h1 className="font-bold text-foreground truncate">{shop?.name ?? "Your shop"}</h1>
+            <h1 className="font-bold text-foreground truncate">{shop.name}</h1>
           </div>
           <div className="flex gap-1">
-            <Button asChild variant="ghost" size="icon"><Link to="/dashboard/settings"><Settings className="size-5" /></Link></Button>
-            <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="size-5" /></Button>
+            <Button asChild variant="ghost" size="icon">
+              <Link to="/dashboard/settings"><Settings className="size-5" /></Link>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={signOut}>
+              <LogOut className="size-5" />
+            </Button>
           </div>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        {shop && (
-          <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
-            <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
-            <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
-            <div className="mt-4 flex gap-2">
-              <Button onClick={copyLink} variant="secondary" size="sm" className="flex-1 sm:flex-none">
-                <Copy className="size-4 mr-1.5" /> Copy
-              </Button>
-              <Button asChild variant="secondary" size="sm" className="flex-1 sm:flex-none">
-                <a href={shopUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="size-4 mr-1.5" /> Preview</a>
-              </Button>
-            </div>
+        <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
+          <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
+          <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={copyLink} variant="secondary" size="sm" className="flex-1 sm:flex-none">
+              <Copy className="size-4 mr-1.5" /> Copy
+            </Button>
+            <Button asChild variant="secondary" size="sm" className="flex-1 sm:flex-none">
+              <a href={shopUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="size-4 mr-1.5" /> Preview
+              </a>
+            </Button>
           </div>
-        )}
+        </div>
 
         {products.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center bg-card">
@@ -158,12 +181,16 @@ function Dashboard() {
           <>
             {products.length >= FREE_PRODUCT_LIMIT && (
               <div className="rounded-xl bg-warning/15 border border-warning/40 p-4">
-                <p className="text-sm font-medium text-foreground">You've hit the free plan limit ({FREE_PRODUCT_LIMIT} products).</p>
+                <p className="text-sm font-medium text-foreground">
+                  You've hit the free plan limit ({FREE_PRODUCT_LIMIT} products).
+                </p>
                 <p className="text-xs text-muted-foreground mt-1">Upgrade to add more — coming soon.</p>
               </div>
             )}
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-foreground">Products <span className="text-muted-foreground font-normal">({products.length}/{FREE_PRODUCT_LIMIT})</span></h2>
+              <h2 className="font-semibold text-foreground">
+                Products <span className="text-muted-foreground font-normal">({products.length}/{FREE_PRODUCT_LIMIT})</span>
+              </h2>
               <Button asChild size="sm" disabled={products.length >= FREE_PRODUCT_LIMIT}>
                 <Link to="/dashboard/add"><Plus className="size-4 mr-1" /> Add product</Link>
               </Button>
@@ -180,9 +207,16 @@ function Dashboard() {
                     <Switch checked={p.in_stock} onCheckedChange={() => toggleStock(p)} />
                     <div className="flex gap-1">
                       <Button asChild variant="ghost" size="icon" className="size-8">
-                        <Link to="/dashboard/edit/$id" params={{ id: p.id }}><Pencil className="size-4" /></Link>
+                        <Link to="/dashboard/edit/$id" params={{ id: p.id }}>
+                          <Pencil className="size-4" />
+                        </Link>
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8 text-destructive" onClick={() => setDeleteId(p.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-destructive"
+                        onClick={() => setDeleteId(p.id)}
+                      >
                         <Trash2 className="size-4" />
                       </Button>
                     </div>
@@ -198,11 +232,15 @@ function Dashboard() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this product?</AlertDialogTitle>
-            <AlertDialogDescription>Customers will no longer see it. This can't be undone.</AlertDialogDescription>
+            <AlertDialogDescription>
+              Customers will no longer see it. This can't be undone.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={doDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={doDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
