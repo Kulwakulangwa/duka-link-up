@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { checkSlug } from "@/lib/shop.functions";
-import { ArrowLeft, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, XCircle, Upload, X } from "lucide-react";
 import { normalizeWhatsApp, sanitize, slugError } from "@/lib/dukalink";
 
 export const Route = createFileRoute("/_authenticated/dashboard/settings")({
@@ -30,17 +30,19 @@ function SettingsPage() {
   const [slug, setSlug] = useState("");
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "taken" | "invalid">("idle");
   const [slugConfirm, setSlugConfirm] = useState(false);
+  // Logo states
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     const loadShop = async () => {
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
         return;
       }
-
-      // Fetch shop owned by this user
       const { data } = await supabase
         .from("shops")
         .select("*")
@@ -55,10 +57,11 @@ function SettingsPage() {
         setLocation(s.location ?? "");
         setWhatsapp(s.whatsapp_number ?? "");
         setSlug(s.slug ?? "");
+        setAvatarUrl(s.avatar_url);
+        if (s.avatar_url) setAvatarPreview(s.avatar_url);
       }
       setLoading(false);
     };
-
     loadShop();
   }, []);
 
@@ -75,6 +78,27 @@ function SettingsPage() {
     }, 350);
     return () => clearTimeout(t);
   }, [slug, slugChanged, check]);
+
+  async function onAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Max image size 2MB");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Only images allowed");
+      return;
+    }
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  }
+
+  async function removeAvatar() {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setAvatarUrl(null);
+  }
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
@@ -104,6 +128,38 @@ function SettingsPage() {
     if (slugChanged) updates.slug = slug;
 
     setSaving(true);
+
+    // Handle avatar upload if a new file was selected
+    let finalAvatarUrl = avatarUrl;
+    if (avatarFile) {
+      setUploadingAvatar(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Not authenticated");
+        setSaving(false);
+        setUploadingAvatar(false);
+        return;
+      }
+      const ext = avatarFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("shop-images")
+        .upload(path, avatarFile, { upsert: true });
+      if (uploadError) {
+        toast.error("Failed to upload logo: " + uploadError.message);
+        setSaving(false);
+        setUploadingAvatar(false);
+        return;
+      }
+      finalAvatarUrl = path;
+      setUploadingAvatar(false);
+    } else if (avatarUrl === null && avatarPreview === null) {
+      // User explicitly removed avatar
+      finalAvatarUrl = null;
+    }
+
+    updates.avatar_url = finalAvatarUrl;
+
     const { error } = await supabase.from("shops").update(updates).eq("id", shop.id);
     setSaving(false);
     if (error) return toast.error("Could not save");
@@ -125,12 +181,8 @@ function SettingsPage() {
         <div className="max-w-2xl mx-auto px-5 py-12 text-center">
           <div className="rounded-xl border border-border bg-card p-8">
             <h2 className="text-2xl font-bold mb-4 text-foreground">No Shop Found</h2>
-            <p className="text-muted-foreground mb-6">
-              You haven't created a shop yet. Create your first shop to access settings.
-            </p>
-            <Button asChild className="w-full sm:w-auto">
-              <Link to="/dashboard">Go to Dashboard</Link>
-            </Button>
+            <p className="text-muted-foreground mb-6">Create a shop first to access settings.</p>
+            <Button asChild><Link to="/dashboard">Go to Dashboard</Link></Button>
           </div>
         </div>
       </main>
@@ -146,6 +198,35 @@ function SettingsPage() {
         </div>
       </header>
       <form onSubmit={onSave} className="max-w-2xl mx-auto px-5 py-6 space-y-5">
+        {/* Logo Upload Section */}
+        <div>
+          <Label>Shop Logo</Label>
+          <div className="mt-1.5 flex items-center gap-4">
+            {(avatarPreview || avatarUrl) && (
+              <div className="relative w-20 h-20 rounded-full overflow-hidden bg-muted border">
+                <img
+                  src={avatarPreview || (avatarUrl ? `https://dukalinkup.royotechtz.cc/api/storage?path=${avatarUrl}` : "")}
+                  alt="Logo preview"
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/80x80?text=Logo"; }}
+                />
+                <button
+                  type="button"
+                  onClick={removeAvatar}
+                  className="absolute top-0 right-0 bg-destructive text-white rounded-full p-0.5"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            )}
+            <label className="cursor-pointer bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-md text-sm">
+              <Upload className="size-4 inline mr-1" /> Upload Logo
+              <input type="file" accept="image/*" className="hidden" onChange={onAvatarChange} />
+            </label>
+            <p className="text-xs text-muted-foreground">JPG, PNG, WebP up to 2MB</p>
+          </div>
+        </div>
+
         <div>
           <Label htmlFor="name">Shop name</Label>
           <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} className="h-12" maxLength={80} />
@@ -199,8 +280,8 @@ function SettingsPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={saving}>
-          {saving ? <Loader2 className="size-4 animate-spin" /> : "Save changes"}
+        <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={saving || uploadingAvatar}>
+          {saving || uploadingAvatar ? <Loader2 className="size-4 animate-spin" /> : "Save changes"}
         </Button>
       </form>
     </main>
