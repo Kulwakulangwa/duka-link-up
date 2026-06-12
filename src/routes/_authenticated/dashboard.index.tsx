@@ -11,7 +11,7 @@ import {
 import { Copy, ExternalLink, Plus, Settings, LogOut, Pencil, Trash2, Sparkles, Store } from "lucide-react";
 import { formatTsh, FREE_PRODUCT_LIMIT } from "@/lib/dukalink";
 import { ProductImage } from "@/components/ProductImage";
-import { ShopLinkCard } from "@/components/ShopLinkCard"; // 👈 import the new card
+import { ShopLinkCard } from "@/components/ShopLinkCard";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   head: () => ({ meta: [{ title: "Dashboard — Dukalink" }] }),
@@ -128,7 +128,6 @@ function Dashboard() {
     );
   }
 
-  // Has shop → show full dashboard with the new ShopLinkCard
   return (
     <main className="min-h-screen bg-background">
       <header className="px-5 py-4 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10">
@@ -149,7 +148,6 @@ function Dashboard() {
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        {/* 👇 NEW STYLISH SHOP LINK CARD - width and layout same as before */}
         <div className="flex justify-center">
           <ShopLinkCard url={shopUrl} label="Your shop link" />
         </div>
