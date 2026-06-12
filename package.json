@@ -5,12 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && node -e \"import('fs').then(({readdirSync,existsSync})=>{console.log('=== BUILD OUTPUT DIRS ===');['.output','dist','.nitro','.vercel'].forEach(d=>{if(existsSync(d)){console.log(d+':',readdirSync(d).join(', '))}else{console.log(d+': NOT FOUND')}})})\" && node copy-server.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write .",
-    "postbuild": "node copy-server.mjs"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
