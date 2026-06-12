@@ -63,7 +63,7 @@ function SettingsPage() {
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
     
-    // ✅ FIX 1: Check if shop exists before proceeding
+    // ✅ FIX: Check if shop exists before saving
     if (!shop || !shop.id) {
       toast.error("No shop found. Please create a shop first.");
       return;
@@ -89,7 +89,6 @@ function SettingsPage() {
     if (slugChanged) updates.slug = slug;
 
     setSaving(true);
-    // ✅ FIX 2: Now shop.id is guaranteed to exist due to check above
     const { error } = await supabase.from("shops").update(updates).eq("id", shop.id);
     setSaving(false);
     if (error) return toast.error("Could not save");
@@ -99,15 +98,13 @@ function SettingsPage() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
 
-  // ✅ FIX 3: Handle case when no shop exists (new user)
+  // ✅ FIX: Show friendly message when no shop exists
   if (!shop) {
     return (
       <main className="min-h-screen bg-background">
         <header className="px-5 py-4 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10">
           <div className="max-w-2xl mx-auto flex items-center gap-3">
-            <Button asChild variant="ghost" size="icon">
-              <Link to="/dashboard"><ArrowLeft className="size-5" /></Link>
-            </Button>
+            <Button asChild variant="ghost" size="icon"><Link to="/dashboard"><ArrowLeft className="size-5" /></Link></Button>
             <h1 className="font-bold text-foreground">Settings</h1>
           </div>
         </header>
