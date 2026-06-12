@@ -38,11 +38,18 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
   useEffect(() => {
     (async () => {
       const { data: shop } = await supabase.from("shops").select("id").maybeSingle();
-      if (!shop) { toast.error("No shop found"); navigate({ to: "/dashboard" }); return; }
-      setShopId((shop as any).id);
+      
+      // ✅ FIX: Handle no shop case
+      if (!shop) {
+        toast.error("No shop found. Please create a shop first.");
+        navigate({ to: "/dashboard" });
+        return;
+      }
+      
+      setShopId(shop.id);
 
       if (mode === "add") {
-        const { count } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("shop_id", (shop as any).id);
+        const { count } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("shop_id", shop.id);
         if ((count ?? 0) >= FREE_PRODUCT_LIMIT) {
           toast.error("Free plan is limited to 5 products");
           navigate({ to: "/dashboard" });
@@ -73,7 +80,13 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!shopId) return;
+    
+    // ✅ FIX: Check if shopId exists
+    if (!shopId) {
+      toast.error("No shop found. Please create a shop first.");
+      return;
+    }
+    
     const cleanName = sanitize(name, 100);
     const cleanDesc = sanitize(description, 500);
     const priceNum = parseFloat(price);
