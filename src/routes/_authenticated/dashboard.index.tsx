@@ -31,14 +31,12 @@ function Dashboard() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   async function load() {
-    // 1. Get current user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setLoading(false);
       return;
     }
 
-    // 2. Fetch shop owned by this user
     const { data: shopRow } = await supabase
       .from("shops")
       .select("id,slug,name")
@@ -48,7 +46,6 @@ function Dashboard() {
     setShop(shopRow as any);
 
     if (shopRow) {
-      // 3. Fetch products for this shop
       const { data: prods } = await supabase
         .from("products")
         .select("id,name,price,image_url,in_stock,description")
@@ -65,7 +62,6 @@ function Dashboard() {
     load();
   }, []);
 
-  // Refresh data when window gains focus (e.g., after returning from create-shop)
   useEffect(() => {
     window.addEventListener('focus', load);
     return () => window.removeEventListener('focus', load);
@@ -101,7 +97,6 @@ function Dashboard() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
 
-  // No shop → show creation prompt
   if (!shop) {
     return (
       <main className="min-h-screen bg-background">
@@ -132,7 +127,6 @@ function Dashboard() {
     );
   }
 
-  // Has shop → show full dashboard
   return (
     <main className="min-h-screen bg-background">
       <header className="px-5 py-4 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10">
@@ -153,19 +147,17 @@ function Dashboard() {
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        {/* ✅ IMPROVED SHOP LINK CARD – Clean, no green background */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your shop link</p>
-          <div className="mt-2 font-mono text-base sm:text-lg break-all text-foreground bg-muted/30 px-3 py-2 rounded-lg">
-            {shopUrl}
-          </div>
+        {/* ✅ GREEN GRADIENT BACKGROUND RESTORED */}
+        <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
+          <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
+          <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
           <div className="mt-4 flex gap-2">
-            <Button onClick={copyLink} variant="default" size="sm" className="flex-1 sm:flex-none gap-1.5">
-              <Copy className="size-4" /> Copy
+            <Button onClick={copyLink} variant="secondary" size="sm" className="flex-1 sm:flex-none">
+              <Copy className="size-4 mr-1.5" /> Copy
             </Button>
-            <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none gap-1.5">
+            <Button asChild variant="secondary" size="sm" className="flex-1 sm:flex-none">
               <a href={shopUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="size-4" /> Preview
+                <ExternalLink className="size-4 mr-1.5" /> Preview
               </a>
             </Button>
           </div>
