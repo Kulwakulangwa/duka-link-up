@@ -94,27 +94,30 @@ function ShopPage() {
     });
   };
 
-  const handleWhatsAppOrder = (productName?: string) => {
+  const handleWhatsAppOrder = (productName?: string, productPrice?: number) => {
     if (!shop?.whatsapp_number) {
       toast.error("Shop WhatsApp number not set");
       return;
     }
 
-    // Use the same normalization function as in settings
+    // Normalize phone number
     let phone = normalizeWhatsApp(shop.whatsapp_number);
     if (!phone) {
-      // Fallback: clean up the number manually
       let raw = shop.whatsapp_number.replace(/\D/g, "");
       if (raw.startsWith("0")) raw = "255" + raw.slice(1);
       if (!raw.startsWith("255")) raw = "255" + raw;
       phone = "+" + raw;
     }
-    // Remove any spaces or dashes
     phone = phone.replace(/\s+/g, "");
 
-    const message = productName
-      ? `Hello! I'd like to order "${productName}" from ${shop.name}.`
-      : `Hello! I'm interested in products from ${shop.name}.`;
+    let message: string;
+    if (productName && productPrice !== undefined) {
+      message = `Hello! I'd like to order "${productName}" priced at ${formatTsh(productPrice)} from ${shop.name}.`;
+    } else if (productName) {
+      message = `Hello! I'd like to order "${productName}" from ${shop.name}.`;
+    } else {
+      message = `Hello! I'm interested in products from ${shop.name}.`;
+    }
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
@@ -254,7 +257,7 @@ function ShopPage() {
                       </p>
                     )}
                     <Button
-                      onClick={() => handleWhatsAppOrder(product.name)}
+                      onClick={() => handleWhatsAppOrder(product.name, product.price)}
                       className="w-full mt-2 sm:mt-3 bg-green-600 hover:bg-green-700 text-white gap-1 sm:gap-2 text-xs sm:text-sm"
                       size="sm"
                     >
