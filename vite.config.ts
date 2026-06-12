@@ -10,4 +10,5 @@ export default defineConfig({
       publicDir: "dist/client",
     },
   },
+  nitro: true,
 });
