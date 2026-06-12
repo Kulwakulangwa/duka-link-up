@@ -1,12 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProductForm } from "./dashboard.add";
+import { ProductForm } from "@/components/ProductForm";
 
 export const Route = createFileRoute("/_authenticated/dashboard/edit/$id")({
-  head: () => ({ meta: [{ title: "Edit product — Dukalink" }] }),
-  component: EditProduct,
+  component: ({ params }) => <ProductForm mode="edit" productId={params.id} />,
 });
-
-function EditProduct() {
-  const { id } = Route.useParams();
-  return <ProductForm mode="edit" productId={id} />;
-}
