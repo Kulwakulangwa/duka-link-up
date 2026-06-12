@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bun run build",
+  "buildCommand": "bun run build && cp -r dist/server api/server",
   "outputDirectory": "dist/client",
   "installCommand": "bun install",
   "framework": null,
