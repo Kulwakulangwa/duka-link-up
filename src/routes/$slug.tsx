@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ProductImage } from "@/components/ProductImage";
 import { Button } from "@/components/ui/button";
 import { Store, MapPin, Clock, Phone, Share2, Check } from "lucide-react";
 import { formatTsh } from "@/lib/dukalink";
@@ -41,69 +40,50 @@ function ShopPage() {
   useEffect(() => {
     async function loadShop() {
       try {
-        // Fetch shop and products using the existing server function or direct API
-        const response = await fetch(`/api/shop/${slug}`);
-        if (!response.ok) {
-          throw new Error("Shop not found");
+        const { data: shopData } = await supabase
+          .from("shops")
+          .select("id, slug, name, description, whatsapp_number, location, avatar_url, created_at")
+          .eq("slug", slug)
+          .maybeSingle();
+        if (!shopData) {
+          setLoading(false);
+          return;
         }
-        const data = await response.json();
-        setShop(data.shop);
-        setProducts(data.products);
+        let avatar_signed_url = null;
+        if (shopData.avatar_url) {
+          const { data: signedUrl } = await supabase.storage
+            .from("shop-images")
+            .createSignedUrl(shopData.avatar_url, 60 * 60 * 24);
+          avatar_signed_url = signedUrl?.signedUrl || null;
+        }
+        setShop({ ...shopData, avatar_signed_url });
+        const { data: productsData } = await supabase
+          .from("products")
+          .select("id, name, price, description, image_url, in_stock")
+          .eq("shop_id", shopData.id)
+          .eq("in_stock", true)
+          .order("created_at", { ascending: false });
+        const productsWithSigned = await Promise.all(
+          (productsData || []).map(async (p: any) => {
+            let image_signed_url = null;
+            if (p.image_url) {
+              const { data: signed } = await supabase.storage
+                .from("shop-images")
+                .createSignedUrl(p.image_url, 60 * 60 * 24);
+              image_signed_url = signed?.signedUrl || null;
+            }
+            return { ...p, image_signed_url };
+          })
+        );
+        setProducts(productsWithSigned);
       } catch (err) {
         console.error(err);
-        setShop(null);
-        setProducts([]);
       } finally {
         setLoading(false);
       }
     }
     loadShop();
   }, [slug]);
-
-  // Alternative: use direct Supabase if server function not set up
-  // This is a fallback – but the above fetch is cleaner if you have an API route
-  useEffect(() => {
-    async function fallbackLoad() {
-      if (shop) return; // already loaded via fetch
-      const { data: shopData } = await supabase
-        .from("shops")
-        .select("id, slug, name, description, whatsapp_number, location, avatar_url, created_at")
-        .eq("slug", slug)
-        .maybeSingle();
-      if (!shopData) return;
-      // Get signed avatar URL
-      let avatar_signed_url = null;
-      if (shopData.avatar_url) {
-        const { data: signedUrl } = await supabase.storage
-          .from("shop-images")
-          .createSignedUrl(shopData.avatar_url, 60 * 60 * 24);
-        avatar_signed_url = signedUrl?.signedUrl || null;
-      }
-      setShop({ ...shopData, avatar_signed_url });
-      // Load products
-      const { data: productsData } = await supabase
-        .from("products")
-        .select("id, name, price, description, image_url, in_stock")
-        .eq("shop_id", shopData.id)
-        .eq("in_stock", true)
-        .order("created_at", { ascending: false });
-      const productsWithSigned = await Promise.all(
-        (productsData || []).map(async (p: any) => {
-          let image_signed_url = null;
-          if (p.image_url) {
-            const { data: signed } = await supabase.storage
-              .from("shop-images")
-              .createSignedUrl(p.image_url, 60 * 60 * 24);
-            image_signed_url = signed?.signedUrl || null;
-          }
-          return { ...p, image_signed_url };
-        })
-      );
-      setProducts(productsWithSigned);
-      setLoading(false);
-    }
-    if (!shop && !loading) fallbackLoad();
-  }, [slug, shop, loading]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -117,7 +97,11 @@ function ShopPage() {
       toast.error("Shop WhatsApp number not set");
       return;
     }
-    const phone = shop.whatsapp_number.startsWith("+") ? shop.whatsapp_number : `+255${shop.whatsapp_number.slice(-9)}`;
+    let phone = shop.whatsapp_number;
+    if (!phone.startsWith("+")) {
+      if (phone.startsWith("0")) phone = `+255${phone.slice(1)}`;
+      else phone = `+255${phone}`;
+    }
     let message = `Hello! I'm interested in products from ${shop.name}.`;
     if (productName) {
       message = `Hello! I'd like to order "${productName}" from ${shop.name}.`;
@@ -163,12 +147,11 @@ function ShopPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with shop name and share */}
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             {shop.avatar_signed_url && (
-              <img src={shop.avatar_signed_url} alt={shop.name} className="size-8 rounded-full object-cover" />
+              <img src={shop.avatar_signed_url} alt={shop.name} className="size-7 rounded-full object-cover" />
             )}
             <span className="font-semibold truncate">{shop.name}</span>
           </div>
@@ -178,55 +161,63 @@ function ShopPage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-6 space-y-8">
+      <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         {/* Shop info card */}
-        <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-          <div className="flex items-center gap-4">
-            {shop.avatar_signed_url && (
-              <img
-                src={shop.avatar_signed_url}
-                alt={shop.name}
-                className="size-20 rounded-full object-cover border"
-              />
-            )}
-            <div className="flex-1">
+        <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex justify-center sm:justify-start">
+              {shop.avatar_signed_url ? (
+                <img
+                  src={shop.avatar_signed_url}
+                  alt={shop.name}
+                  className="size-20 rounded-full object-cover border-2 border-primary/20"
+                />
+              ) : (
+                <div className="size-20 rounded-full bg-muted flex items-center justify-center">
+                  <Store className="size-10 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 text-center sm:text-left">
               <h1 className="text-2xl font-bold">{shop.name}</h1>
               {shop.location && (
-                <div className="flex items-center gap-1 text-muted-foreground text-sm mt-1">
+                <div className="flex items-center justify-center sm:justify-start gap-1 text-muted-foreground text-sm mt-1">
                   <MapPin className="size-3" />
                   <span>{shop.location}</span>
                 </div>
               )}
-              <div className="flex items-center gap-1 text-muted-foreground text-xs mt-2">
+              <div className="flex items-center justify-center sm:justify-start gap-1 text-muted-foreground text-xs mt-1">
                 <Clock className="size-3" />
                 <span>Selling since {formatDate(shop.created_at)}</span>
               </div>
             </div>
+            {shop.whatsapp_number && (
+              <div className="sm:ml-auto">
+                <Button
+                  onClick={() => handleWhatsAppOrder()}
+                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white gap-2"
+                >
+                  <Phone className="size-4" /> Contact
+                </Button>
+              </div>
+            )}
           </div>
           {shop.description && (
-            <p className="mt-4 text-foreground/80 border-t border-border pt-4">
+            <p className="mt-4 text-foreground/80 border-t border-border pt-4 text-center sm:text-left">
               {shop.description}
             </p>
           )}
-          {shop.whatsapp_number && (
-            <Button
-              onClick={() => handleWhatsAppOrder()}
-              className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Phone className="size-4 mr-2" /> Contact shop on WhatsApp
-            </Button>
-          )}
         </div>
 
-        {/* Products section */}
+        {/* Products section with 2 columns on all screen sizes */}
         <div>
-          <h2 className="text-xl font-semibold mb-4">Products</h2>
+          <h2 className="text-xl font-semibold mb-4 px-1">Products</h2>
           {products.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground border rounded-2xl">
               No products available yet.
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {products.map((product) => (
                 <div
                   key={product.id}
@@ -245,20 +236,20 @@ function ShopPage() {
                       </div>
                     )}
                   </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-foreground">{product.name}</h3>
-                    <p className="text-primary font-bold mt-1">{formatTsh(product.price)}</p>
+                  <div className="p-2 sm:p-3">
+                    <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">{product.name}</h3>
+                    <p className="text-primary font-bold text-sm sm:text-base mt-1">{formatTsh(product.price)}</p>
                     {product.description && (
-                      <p className="text-muted-foreground text-sm mt-2 line-clamp-2">
+                      <p className="text-muted-foreground text-xs sm:text-sm mt-1 line-clamp-2 hidden sm:block">
                         {product.description}
                       </p>
                     )}
                     <Button
                       onClick={() => handleWhatsAppOrder(product.name)}
-                      className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white"
+                      className="w-full mt-2 sm:mt-3 bg-green-600 hover:bg-green-700 text-white gap-1 sm:gap-2 text-xs sm:text-sm"
                       size="sm"
                     >
-                      <Phone className="size-4 mr-2" /> Order via WhatsApp
+                      <Phone className="size-3 sm:size-4" /> Order
                     </Button>
                   </div>
                 </div>
@@ -268,7 +259,6 @@ function ShopPage() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-border mt-12 py-6 text-center text-muted-foreground text-sm">
         <p>Powered by Duka Link Up</p>
       </footer>
