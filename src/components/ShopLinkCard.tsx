@@ -5,9 +5,10 @@ import { Copy, ExternalLink } from "lucide-react";
 interface ShopLinkCardProps {
   url: string;
   label?: string;
+  className?: string;
 }
 
-export function ShopLinkCard({ url, label = "Your shop link" }: ShopLinkCardProps) {
+export function ShopLinkCard({ url, label = "Your shop link", className = "" }: ShopLinkCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
 
@@ -45,17 +46,20 @@ export function ShopLinkCard({ url, label = "Your shop link" }: ShopLinkCardProp
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#111827] p-6 overflow-hidden transition-transform duration-100"
+      className={`relative w-full rounded-2xl border border-white/10 bg-[#111827] p-6 overflow-hidden transition-transform duration-100 ${className}`}
       style={{ "--bg-x": "50%", "--bg-y": "50%" } as React.CSSProperties}
     >
+      {/* holo glow */}
       <div
         className="pointer-events-none absolute inset-0 rounded-2xl"
         style={{ background: "radial-gradient(circle at var(--bg-x) var(--bg-y), rgba(0,201,167,0.18), rgba(255,170,0,0.06) 40%, transparent 70%)" }}
       />
+      {/* shimmer */}
       <div
         className="pointer-events-none absolute inset-0 rounded-2xl"
         style={{ background: "radial-gradient(ellipse 80px 80px at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.07), transparent)" }}
       />
+      {/* corner accents */}
       <span className="absolute top-2.5 left-2.5 w-3.5 h-3.5 border-t-[1.5px] border-l-[1.5px] border-[#00C9A7] rounded-tl" />
       <span className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-[1.5px] border-r-[1.5px] border-[#FFAA00] rounded-br" />
 
