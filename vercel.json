@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bun run build && cp -r dist/server api/server",
+  "buildCommand": "bun run build && bun build dist/server/index.mjs --outfile api/index.js --target node --bundle",
   "outputDirectory": "dist/client",
   "installCommand": "bun install",
   "framework": null,
