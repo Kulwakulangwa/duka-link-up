@@ -32,7 +32,21 @@ function SettingsPage() {
   const [slugConfirm, setSlugConfirm] = useState(false);
 
   useEffect(() => {
-    supabase.from("shops").select("*").maybeSingle().then(({ data }) => {
+    const loadShop = async () => {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // Fetch shop owned by this user
+      const { data } = await supabase
+        .from("shops")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
       if (data) {
         const s = data as any;
         setShop(s);
@@ -43,7 +57,9 @@ function SettingsPage() {
         setSlug(s.slug ?? "");
       }
       setLoading(false);
-    });
+    };
+
+    loadShop();
   }, []);
 
   const slugChanged = shop && slug !== shop.slug;
@@ -62,13 +78,12 @@ function SettingsPage() {
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
-    
-    // ✅ FIX: Check if shop exists before saving
+
     if (!shop || !shop.id) {
       toast.error("No shop found. Please create a shop first.");
       return;
     }
-    
+
     if (slugChanged && slugStatus !== "ok") return toast.error("Pick an available link");
     if (slugChanged && !slugConfirm) return toast.error("Confirm the link change");
 
@@ -98,7 +113,6 @@ function SettingsPage() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
 
-  // ✅ FIX: Show friendly message when no shop exists
   if (!shop) {
     return (
       <main className="min-h-screen bg-background">
