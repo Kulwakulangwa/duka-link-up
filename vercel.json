@@ -1,12 +1,5 @@
 {
-  "buildCommand": "bun run build && bun build dist/server/index.mjs --outfile api/server.js --target node --bundle --format esm",
-  "outputDirectory": "dist/client",
+  "buildCommand": "bun run build",
   "installCommand": "bun install",
-  "framework": null,
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index"
-    }
-  ]
+  "framework": null
 }
