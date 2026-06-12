@@ -153,16 +153,19 @@ function Dashboard() {
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
-          <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
-          <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
+        {/* ✅ IMPROVED SHOP LINK CARD – Clean, no green background */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your shop link</p>
+          <div className="mt-2 font-mono text-base sm:text-lg break-all text-foreground bg-muted/30 px-3 py-2 rounded-lg">
+            {shopUrl}
+          </div>
           <div className="mt-4 flex gap-2">
-            <Button onClick={copyLink} variant="secondary" size="sm" className="flex-1 sm:flex-none">
-              <Copy className="size-4 mr-1.5" /> Copy
+            <Button onClick={copyLink} variant="default" size="sm" className="flex-1 sm:flex-none gap-1.5">
+              <Copy className="size-4" /> Copy
             </Button>
-            <Button asChild variant="secondary" size="sm" className="flex-1 sm:flex-none">
+            <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none gap-1.5">
               <a href={shopUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="size-4 mr-1.5" /> Preview
+                <ExternalLink className="size-4" /> Preview
               </a>
             </Button>
           </div>
