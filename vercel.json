@@ -1,8 +1,8 @@
 {
+  "framework": null,
+  "installCommand": "bun install",
   "buildCommand": "bun run build",
   "outputDirectory": "dist/client",
-  "installCommand": "bun install",
-  "framework": null,
   "functions": {
     "api/index.js": {
       "runtime": "nodejs20.x",
