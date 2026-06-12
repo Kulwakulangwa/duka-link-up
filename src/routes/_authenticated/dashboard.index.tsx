@@ -33,21 +33,24 @@ function Dashboard() {
   async function load() {
     const { data: shopRow } = await supabase.from("shops").select("id,slug,name").maybeSingle();
     setShop(shopRow as any);
-    
-    if (shopRow?.id) {
+    if (shopRow) {
       const { data: prods } = await supabase
         .from("products")
         .select("id,name,price,image_url,in_stock,description")
-        .eq("shop_id", shopRow.id)
+        .eq("shop_id", (shopRow as any).id)
         .order("created_at", { ascending: false });
       setProducts((prods as any) ?? []);
-    } else {
-      setProducts([]);
     }
     setLoading(false);
   }
   
   useEffect(() => { load(); }, []);
+
+  // ✅ NEW: Refresh data when window gets focus (after returning from create-shop)
+  useEffect(() => {
+    window.addEventListener('focus', load);
+    return () => window.removeEventListener('focus', load);
+  }, []);
 
   const shopUrl = typeof window !== "undefined" && shop ? `${window.location.origin}/${shop.slug}` : "";
 
@@ -79,7 +82,7 @@ function Dashboard() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
 
-  // ✅ THIS IS THE KEY CHANGE - Add Create Shop button
+  // ✅ NEW: Show "Create Shop" button when no shop exists (instead of crashing)
   if (!shop) {
     return (
       <main className="min-h-screen bg-background">
@@ -89,9 +92,9 @@ function Dashboard() {
               <Store className="size-5 text-primary shrink-0" />
               <h1 className="font-bold text-foreground">Duka Link Up</h1>
             </div>
-            <Button variant="ghost" size="icon" onClick={signOut}>
-              <LogOut className="size-5" />
-            </Button>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="size-5" /></Button>
+            </div>
           </div>
         </header>
         <div className="max-w-3xl mx-auto px-5 py-12">
@@ -101,7 +104,6 @@ function Dashboard() {
             <p className="text-muted-foreground mb-6">
               Create your digital shop page and start selling online today.
             </p>
-            {/* ✅ THIS BUTTON WAS MISSING */}
             <Button asChild size="lg" className="h-12 px-8 font-semibold">
               <Link to="/create-shop">Create Your Shop →</Link>
             </Button>
@@ -111,7 +113,7 @@ function Dashboard() {
     );
   }
 
-  // Rest of dashboard for users with shops
+  // ✅ Everything below is your original dashboard (Settings button, products, etc.) – unchanged
   return (
     <main className="min-h-screen bg-background">
       <header className="px-5 py-4 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10">
@@ -128,18 +130,20 @@ function Dashboard() {
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
-          <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
-          <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
-          <div className="mt-4 flex gap-2">
-            <Button onClick={copyLink} variant="secondary" size="sm" className="flex-1 sm:flex-none">
-              <Copy className="size-4 mr-1.5" /> Copy
-            </Button>
-            <Button asChild variant="secondary" size="sm" className="flex-1 sm:flex-none">
-              <a href={shopUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="size-4 mr-1.5" /> Preview</a>
-            </Button>
+        {shop && (
+          <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
+            <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
+            <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
+            <div className="mt-4 flex gap-2">
+              <Button onClick={copyLink} variant="secondary" size="sm" className="flex-1 sm:flex-none">
+                <Copy className="size-4 mr-1.5" /> Copy
+              </Button>
+              <Button asChild variant="secondary" size="sm" className="flex-1 sm:flex-none">
+                <a href={shopUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="size-4 mr-1.5" /> Preview</a>
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         {products.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center bg-card">
