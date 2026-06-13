@@ -99,8 +99,6 @@ function ShopPage() {
       toast.error("Shop WhatsApp number not set");
       return;
     }
-
-    // Normalize phone number
     let phone = normalizeWhatsApp(shop.whatsapp_number);
     if (!phone) {
       let raw = shop.whatsapp_number.replace(/\D/g, "");
@@ -109,7 +107,6 @@ function ShopPage() {
       phone = "+" + raw;
     }
     phone = phone.replace(/\s+/g, "");
-
     let message: string;
     if (productName && productPrice !== undefined) {
       message = `Hello! I'd like to order "${productName}" priced at ${formatTsh(productPrice)} from ${shop.name}.`;
@@ -221,7 +218,7 @@ function ShopPage() {
           )}
         </div>
 
-        {/* Products section with 2 columns on all screen sizes */}
+        {/* Products section */}
         <div>
           <h2 className="text-xl font-semibold mb-4 px-1">Products</h2>
           {products.length === 0 ? (
@@ -271,8 +268,19 @@ function ShopPage() {
         </div>
       </main>
 
+      {/* ✅ Updated footer with green "Create your own shop" link */}
       <footer className="border-t border-border mt-12 py-6 text-center text-muted-foreground text-sm">
         <p>Powered by Duka Link Up</p>
+        <p className="mt-2">
+          <a 
+            href="https://dukalinkup.royotechtz.cc" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-green-500 hover:text-green-400 transition-colors"
+          >
+            Create your own shop →
+          </a>
+        </p>
       </footer>
     </div>
   );
