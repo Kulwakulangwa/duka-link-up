@@ -13,7 +13,7 @@ import { formatTsh, FREE_PRODUCT_LIMIT } from "@/lib/dukalink";
 import { ProductImage } from "@/components/ProductImage";
 
 // Admin email – change this to your own email
-const ADMIN_EMAIL = "admin@dukalink.com"; // 👈 Replace with your email
+const ADMIN_EMAIL = "kulwakulangwa@gmail.com"; // 👈 Replace with your email
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   head: () => ({ meta: [{ title: "Dashboard — Dukalink" }] }),
