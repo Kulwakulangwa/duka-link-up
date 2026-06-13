@@ -31,7 +31,8 @@ function SettingsPage() {
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "taken" | "invalid">("idle");
   const [slugConfirm, setSlugConfirm] = useState(false);
   // Logo states
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarPath, setAvatarPath] = useState<string | null>(null);
+  const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -57,8 +58,16 @@ function SettingsPage() {
         setLocation(s.location ?? "");
         setWhatsapp(s.whatsapp_number ?? "");
         setSlug(s.slug ?? "");
-        setAvatarUrl(s.avatar_url);
-        if (s.avatar_url) setAvatarPreview(s.avatar_url);
+        setAvatarPath(s.avatar_url);
+        
+        // Generate signed URL for avatar if exists
+        if (s.avatar_url) {
+          const { data: signed } = await supabase.storage
+            .from("shop-images")
+            .createSignedUrl(s.avatar_url, 60 * 60 * 24); // 24 hours
+          setAvatarSignedUrl(signed?.signedUrl || null);
+          setAvatarPreview(signed?.signedUrl || null);
+        }
       }
       setLoading(false);
     };
@@ -97,7 +106,8 @@ function SettingsPage() {
   async function removeAvatar() {
     setAvatarFile(null);
     setAvatarPreview(null);
-    setAvatarUrl(null);
+    setAvatarPath(null);
+    setAvatarSignedUrl(null);
   }
 
   async function onSave(e: React.FormEvent) {
@@ -130,7 +140,7 @@ function SettingsPage() {
     setSaving(true);
 
     // Handle avatar upload if a new file was selected
-    let finalAvatarUrl = avatarUrl;
+    let finalAvatarPath = avatarPath;
     if (avatarFile) {
       setUploadingAvatar(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -151,14 +161,14 @@ function SettingsPage() {
         setUploadingAvatar(false);
         return;
       }
-      finalAvatarUrl = path;
+      finalAvatarPath = path;
       setUploadingAvatar(false);
-    } else if (avatarUrl === null && avatarPreview === null) {
+    } else if (avatarPath === null && avatarPreview === null) {
       // User explicitly removed avatar
-      finalAvatarUrl = null;
+      finalAvatarPath = null;
     }
 
-    updates.avatar_url = finalAvatarUrl;
+    updates.avatar_url = finalAvatarPath;
 
     const { error } = await supabase.from("shops").update(updates).eq("id", shop.id);
     setSaving(false);
@@ -202,13 +212,12 @@ function SettingsPage() {
         <div>
           <Label>Shop Logo</Label>
           <div className="mt-1.5 flex items-center gap-4">
-            {(avatarPreview || avatarUrl) && (
+            {(avatarPreview || avatarSignedUrl) && (
               <div className="relative w-20 h-20 rounded-full overflow-hidden bg-muted border">
                 <img
-                  src={avatarPreview || (avatarUrl ? `https://dukalinkup.royotechtz.cc/api/storage?path=${avatarUrl}` : "")}
+                  src={avatarPreview || avatarSignedUrl || ""}
                   alt="Logo preview"
                   className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/80x80?text=Logo"; }}
                 />
                 <button
                   type="button"
