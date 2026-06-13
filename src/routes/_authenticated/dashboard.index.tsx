@@ -8,10 +8,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Copy, ExternalLink, Plus, Settings, LogOut, Pencil, Trash2, Sparkles, Store } from "lucide-react";
+import { Copy, ExternalLink, Plus, Settings, LogOut, Pencil, Trash2, Sparkles, Store, Shield } from "lucide-react";
 import { formatTsh, FREE_PRODUCT_LIMIT } from "@/lib/dukalink";
 import { ProductImage } from "@/components/ProductImage";
-import { ShopLinkCard } from "@/components/ShopLinkCard";
+
+// Admin email – change this to your own email
+const ADMIN_EMAIL = "admin@dukalink.com"; // 👈 Replace with your email
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   head: () => ({ meta: [{ title: "Dashboard — Dukalink" }] }),
@@ -30,12 +32,18 @@ function Dashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setLoading(false);
       return;
+    }
+
+    // Check admin status
+    if (user.email === ADMIN_EMAIL) {
+      setIsAdmin(true);
     }
 
     const { data: shopRow } = await supabase
@@ -107,9 +115,16 @@ function Dashboard() {
               <Store className="size-5 text-primary shrink-0" />
               <h1 className="font-bold text-foreground">Duka Link Up</h1>
             </div>
-            <Button variant="ghost" size="icon" onClick={signOut}>
-              <LogOut className="size-5" />
-            </Button>
+            <div className="flex gap-1">
+              {isAdmin && (
+                <Button asChild variant="ghost" size="icon">
+                  <Link to="/admin"><Shield className="size-5" /></Link>
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" onClick={signOut}>
+                <LogOut className="size-5" />
+              </Button>
+            </div>
           </div>
         </header>
         <div className="max-w-3xl mx-auto px-5 py-12">
@@ -140,6 +155,11 @@ function Dashboard() {
             <Button asChild variant="ghost" size="icon">
               <Link to="/dashboard/settings"><Settings className="size-5" /></Link>
             </Button>
+            {isAdmin && (
+              <Button asChild variant="ghost" size="icon">
+                <Link to="/admin"><Shield className="size-5" /></Link>
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={signOut}>
               <LogOut className="size-5" />
             </Button>
@@ -148,8 +168,21 @@ function Dashboard() {
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        {/* ShopLinkCard now takes full width, matching the product limit card */}
-        <ShopLinkCard url={shopUrl} label="Your shop link" />
+        {/* Green gradient shop link card */}
+        <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
+          <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
+          <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={copyLink} variant="secondary" size="sm" className="flex-1 sm:flex-none">
+              <Copy className="size-4 mr-1.5" /> Copy
+            </Button>
+            <Button asChild variant="secondary" size="sm" className="flex-1 sm:flex-none">
+              <a href={shopUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="size-4 mr-1.5" /> Preview
+              </a>
+            </Button>
+          </div>
+        </div>
 
         {products.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center bg-card">
