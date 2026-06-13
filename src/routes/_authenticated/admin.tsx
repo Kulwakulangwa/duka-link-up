@@ -10,16 +10,9 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-// Admin email – change this to your own email
-const ADMIN_EMAIL = "admin@dukalink.com"; // 👈 Replace with your email
+const ADMIN_EMAIL = "kulwakulangwa@gmail.com"; // 👈 Change to your email
 
-interface MetricCardProps {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-}
-
-function MetricCard({ title, value, icon }: MetricCardProps) {
+function MetricCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -51,8 +44,6 @@ function AdminPage() {
         toast.error("Not authenticated");
         return;
       }
-
-      // Check if user is admin by email
       if (user.email !== ADMIN_EMAIL) {
         toast.error("Access denied. Admins only.");
         setIsAdmin(false);
@@ -61,52 +52,17 @@ function AdminPage() {
       }
       setIsAdmin(true);
 
-      // Fetch metrics
       try {
-        // Total users
-        const { count: userCount } = await supabase
-          .from("shops") // we don't have direct auth.users access? Use RPC or alternative.
-          .select("*", { count: "exact", head: true });
-        // Actually auth.users is not accessible via supabase client from browser. We'll use a custom RPC or count from shops? Not reliable.
-        // Better to create a Supabase function to get total users.
-        // For simplicity, we'll count from shops (each shop belongs to a user) but not perfect if user has no shop.
-        // I'll create a SQL function later. For now, use a separate call to a custom RPC.
-
-        // Let's assume we have a function `get_total_users`
-        let totalUsers = 0;
-        const { data: userCountData, error: userCountError } = await supabase
-          .rpc('get_total_users');
-        if (userCountError) {
-          console.error("Error getting total users:", userCountError);
-        } else {
-          totalUsers = userCountData;
-        }
-
-        // Total shops
-        const { count: shopCount } = await supabase
-          .from("shops")
-          .select("*", { count: "exact", head: true });
-
-        // Total products
-        const { count: productCount } = await supabase
-          .from("products")
-          .select("*", { count: "exact", head: true });
-
-        // Recent users (from auth.users) – need RPC again. We'll fetch from a view or RPC.
-        const { data: recentUsers } = await supabase
-          .rpc('get_recent_users', { limit_count: 10 });
-
-        // Recent shops
-        const { data: recentShops } = await supabase
-          .from("shops")
-          .select("id, name, slug, created_at, user_id")
-          .order("created_at", { ascending: false })
-          .limit(10);
+        const { data: totalUsers } = await supabase.rpc('get_total_users');
+        const { count: totalShops } = await supabase.from("shops").select("*", { count: "exact", head: true });
+        const { count: totalProducts } = await supabase.from("products").select("*", { count: "exact", head: true });
+        const { data: recentUsers } = await supabase.rpc('get_recent_users', { limit_count: 10 });
+        const { data: recentShops } = await supabase.from("shops").select("id, name, slug, created_at, user_id").order("created_at", { ascending: false }).limit(10);
 
         setMetrics({
           totalUsers: totalUsers || 0,
-          totalShops: shopCount || 0,
-          totalProducts: productCount || 0,
+          totalShops: totalShops || 0,
+          totalProducts: totalProducts || 0,
           recentUsers: recentUsers || [],
           recentShops: recentShops || [],
         });
@@ -143,28 +99,21 @@ function AdminPage() {
   return (
     <main className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-5 py-6 space-y-6">
-        {/* Header with back button */}
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="icon">
-            <Link to="/dashboard">
-              <ArrowLeft className="size-5" />
-            </Link>
+            <Link to="/dashboard"><ArrowLeft className="size-5" /></Link>
           </Button>
           <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
         </div>
 
-        {/* Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <MetricCard title="Total Users" value={metrics.totalUsers} icon={<Users className="size-4 text-muted-foreground" />} />
           <MetricCard title="Total Shops" value={metrics.totalShops} icon={<Store className="size-4 text-muted-foreground" />} />
           <MetricCard title="Total Products" value={metrics.totalProducts} icon={<Package className="size-4 text-muted-foreground" />} />
         </div>
 
-        {/* Recent Users */}
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Users</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Recent Users</CardTitle></CardHeader>
           <CardContent>
             {metrics.recentUsers.length === 0 ? (
               <p className="text-muted-foreground">No users found</p>
@@ -184,11 +133,8 @@ function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Shops */}
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Shops</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Recent Shops</CardTitle></CardHeader>
           <CardContent>
             {metrics.recentShops.length === 0 ? (
               <p className="text-muted-foreground">No shops found</p>
