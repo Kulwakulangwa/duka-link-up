@@ -11,12 +11,10 @@ import { checkSlug } from "@/lib/shop.functions";
 import { ArrowLeft, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { sanitize, slugError } from "@/lib/dukalink";
 
-// Helper: generate random code (only for direct signups)
 function generateReferralCode(): string {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 }
 
-// Helper: get shop ID by referral code
 async function getShopIdByReferralCode(code: string): Promise<string | null> {
   const { data } = await supabase
     .from("shops")
@@ -82,7 +80,6 @@ function CreateShopPage() {
         return;
       }
 
-      // Check existing shop
       const { data: existingShop } = await supabase
         .from("shops")
         .select("id")
@@ -95,26 +92,31 @@ function CreateShopPage() {
         return;
       }
 
-      // Check for referral parameter
+      // 1. Try URL param, then sessionStorage
       const urlParams = new URLSearchParams(window.location.search);
       let refCode = urlParams.get('ref');
       if (!refCode) {
         refCode = sessionStorage.getItem('referral_code');
       }
-      
+
       let referredById: string | null = null;
       let isReferred = false;
 
       if (refCode) {
+        console.log("Referral code found:", refCode);
         referredById = await getShopIdByReferralCode(refCode);
         isReferred = !!referredById;
-        if (refCode) sessionStorage.removeItem('referral_code');
+        if (referredById) {
+          console.log("Referred by shop ID:", referredById);
+        } else {
+          console.warn("Referral code invalid:", refCode);
+        }
+        // Clear after use
+        sessionStorage.removeItem('referral_code');
       }
 
-      // Generate referral code ONLY for direct signups (not referred)
       const referralCode = isReferred ? null : generateReferralCode();
 
-      // Insert shop
       const { error } = await supabase.from("shops").insert({
         user_id: userData.user.id,
         name: sanitize(name, 80),
@@ -127,12 +129,12 @@ function CreateShopPage() {
       });
 
       if (error) {
-        console.error("Shop creation error:", error);
+        console.error("Insert error:", error);
         toast.error("Could not create shop: " + error.message);
         return;
       }
 
-      // If this user was referred, give the referrer the bonus too
+      // If referred, give bonus to referrer
       if (isReferred && referredById) {
         const { data: referrer } = await supabase
           .from("shops")
@@ -141,10 +143,15 @@ function CreateShopPage() {
           .single();
         
         if (referrer && !referrer.referral_bonus_applied) {
-          await supabase
+          const { error: updateErr } = await supabase
             .from("shops")
             .update({ referral_bonus_applied: true })
             .eq("id", referredById);
+          if (updateErr) {
+            console.error("Failed to update referrer bonus:", updateErr);
+          } else {
+            console.log("Referrer bonus applied");
+          }
         }
       }
 
