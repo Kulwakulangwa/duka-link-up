@@ -92,7 +92,7 @@ function CreateShopPage() {
         return;
       }
 
-      // 1. Try URL param, then sessionStorage
+      // Capture referral code (URL param first, then sessionStorage)
       const urlParams = new URLSearchParams(window.location.search);
       let refCode = urlParams.get('ref');
       if (!refCode) {
@@ -103,15 +103,9 @@ function CreateShopPage() {
       let isReferred = false;
 
       if (refCode) {
-        console.log("Referral code found:", refCode);
         referredById = await getShopIdByReferralCode(refCode);
         isReferred = !!referredById;
-        if (referredById) {
-          console.log("Referred by shop ID:", referredById);
-        } else {
-          console.warn("Referral code invalid:", refCode);
-        }
-        // Clear after use
+        // Clean up
         sessionStorage.removeItem('referral_code');
       }
 
@@ -132,27 +126,6 @@ function CreateShopPage() {
         console.error("Insert error:", error);
         toast.error("Could not create shop: " + error.message);
         return;
-      }
-
-      // If referred, give bonus to referrer
-      if (isReferred && referredById) {
-        const { data: referrer } = await supabase
-          .from("shops")
-          .select("referral_bonus_applied")
-          .eq("id", referredById)
-          .single();
-        
-        if (referrer && !referrer.referral_bonus_applied) {
-          const { error: updateErr } = await supabase
-            .from("shops")
-            .update({ referral_bonus_applied: true })
-            .eq("id", referredById);
-          if (updateErr) {
-            console.error("Failed to update referrer bonus:", updateErr);
-          } else {
-            console.log("Referrer bonus applied");
-          }
-        }
       }
 
       toast.success("Shop created successfully!");
