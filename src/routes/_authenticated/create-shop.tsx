@@ -16,11 +16,14 @@ function generateReferralCode(): string {
 }
 
 async function getShopIdByReferralCode(code: string): Promise<string | null> {
-  const { data } = await supabase
+  console.log("🔍 Looking up referral code:", code);
+  const { data, error } = await supabase
     .from("shops")
     .select("id")
     .eq("referral_code", code)
     .maybeSingle();
+  if (error) console.error("❌ Lookup error:", error);
+  console.log("✅ Lookup result:", data?.id || null);
   return data?.id || null;
 }
 
@@ -95,21 +98,27 @@ function CreateShopPage() {
       // Capture referral code (URL param first, then sessionStorage)
       const urlParams = new URLSearchParams(window.location.search);
       let refCode = urlParams.get('ref');
+      console.log("📌 URL param refCode:", refCode);
       if (!refCode) {
         refCode = sessionStorage.getItem('referral_code');
+        console.log("📌 sessionStorage refCode:", refCode);
       }
 
       let referredById: string | null = null;
       let isReferred = false;
 
       if (refCode) {
+        console.log("🔁 Attempting to resolve referral code:", refCode);
         referredById = await getShopIdByReferralCode(refCode);
         isReferred = !!referredById;
-        // Clean up
+        console.log("👉 Resolved to shop ID:", referredById, "isReferred:", isReferred);
         sessionStorage.removeItem('referral_code');
+      } else {
+        console.log("❌ No referral code found in URL or sessionStorage");
       }
 
       const referralCode = isReferred ? null : generateReferralCode();
+      console.log("📦 Generated own referral code (if direct):", referralCode);
 
       const { error } = await supabase.from("shops").insert({
         user_id: userData.user.id,
@@ -123,11 +132,12 @@ function CreateShopPage() {
       });
 
       if (error) {
-        console.error("Insert error:", error);
+        console.error("❌ Insert error:", error);
         toast.error("Could not create shop: " + error.message);
         return;
       }
 
+      console.log("✅ Shop inserted successfully. referred_by:", referredById);
       toast.success("Shop created successfully!");
       window.location.href = "/dashboard";
     } catch (err) {
