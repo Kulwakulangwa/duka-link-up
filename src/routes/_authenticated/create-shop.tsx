@@ -45,7 +45,7 @@ function CreateShopPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       toast.error("Shop name is required");
       return;
@@ -68,6 +68,7 @@ function CreateShopPage() {
         return;
       }
 
+      // Check if user already has a shop
       const { data: existingShop } = await supabase
         .from("shops")
         .select("id")
@@ -80,21 +81,25 @@ function CreateShopPage() {
         return;
       }
 
-      // Generate unique referral code
+      // Generate a unique referral code
       const referralCode = generateReferralCode();
 
-      // Check if user came from referral link
+      // Check URL for referral parameter
       const urlParams = new URLSearchParams(window.location.search);
-      const refCode = urlParams.get('ref');
-      let referredById = null;
+      const refCode = urlParams.get("ref");
+      let referredById: string | null = null;
       let bonusApplied = false;
 
       if (refCode) {
         referredById = await getShopIdByReferralCode(refCode);
-        bonusApplied = !!referredById;
+        if (referredById) {
+          bonusApplied = true;
+          console.log(`New shop referred by ${referredById}`);
+        }
       }
 
-      const { error } = await supabase.from("shops").insert({
+      // Insert the shop
+      const { error: insertError } = await supabase.from("shops").insert({
         user_id: userData.user.id,
         name: sanitize(name, 80),
         description: sanitize(description, 500) || null,
@@ -105,15 +110,14 @@ function CreateShopPage() {
         referral_bonus_applied: bonusApplied,
       });
 
-      if (error) {
-        console.error("Shop creation error:", error);
-        toast.error("Could not create shop: " + error.message);
+      if (insertError) {
+        console.error("Shop creation error:", insertError);
+        toast.error("Could not create shop: " + insertError.message);
         return;
       }
 
-      // If this user was referred, also give the referrer a bonus (if not already applied)
+      // If this user was referred, also give the referrer the bonus (if not already applied)
       if (bonusApplied && referredById) {
-        // Update referrer's bonus flag if not already set
         const { data: referrer } = await supabase
           .from("shops")
           .select("referral_bonus_applied")
@@ -148,7 +152,7 @@ function CreateShopPage() {
           <h1 className="font-bold text-foreground">Create Your Shop</h1>
         </div>
       </header>
-      
+
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto px-5 py-6 space-y-5">
         <div>
           <Label htmlFor="name">Shop Name *</Label>
