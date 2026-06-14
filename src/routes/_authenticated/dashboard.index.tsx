@@ -33,6 +33,7 @@ function Dashboard() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [referralCode, setReferralCode] = useState<string>("");
+  const [referredBy, setReferredBy] = useState<string | null>(null);
   const [referralBonusApplied, setReferralBonusApplied] = useState(false);
   const [productLimit, setProductLimit] = useState<number>(FREE_PRODUCT_LIMIT);
 
@@ -56,16 +57,15 @@ function Dashboard() {
     setShop(shopRow as any);
 
     if (shopRow) {
-      // Fetch full shop details for referral info
       const { data: shopDetails } = await supabase
         .from("shops")
-        .select("referral_code, referral_bonus_applied")
+        .select("referral_code, referred_by, referral_bonus_applied")
         .eq("id", shopRow.id)
         .single();
 
       if (shopDetails) {
-        const code = shopDetails.referral_code || "";
-        setReferralCode(code);
+        setReferralCode(shopDetails.referral_code || "");
+        setReferredBy(shopDetails.referred_by || null);
         const bonus = shopDetails.referral_bonus_applied === true;
         setReferralBonusApplied(bonus);
         setProductLimit(bonus ? 10 : FREE_PRODUCT_LIMIT);
@@ -119,7 +119,7 @@ function Dashboard() {
     } else {
       setReferralCode(newCode);
       toast.success("Referral link created! Share it with friends.");
-      load(); // reload to refresh everything
+      load();
     }
   }
 
@@ -223,8 +223,20 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Referral Section */}
-        {!referralCode ? (
+        {/* Referral Section – conditional */}
+        {referredBy ? (
+          // Case 1: User was referred → show congratulations, no referral link
+          <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-5 text-center">
+            <p className="text-sm font-semibold text-green-600 mb-2">🎉 Congratulations!</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              You signed up using a referral link. As a welcome gift, you get <strong>10 product slots</strong> instead of 5.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Enjoy selling with Duka Link Up!
+            </p>
+          </div>
+        ) : !referralCode ? (
+          // Case 2: Direct user without a referral code yet → offer to generate
           <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 text-center">
             <p className="text-sm font-semibold text-primary mb-2">🎁 Get your referral link</p>
             <p className="text-xs text-muted-foreground mb-3">
@@ -235,6 +247,7 @@ function Dashboard() {
             </Button>
           </div>
         ) : (
+          // Case 3: Direct user with a referral code → show full referral card
           <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
             <p className="text-sm font-semibold text-primary mb-2">🎁 Invite friends, get more products!</p>
             <p className="text-xs text-muted-foreground mb-3">
@@ -254,7 +267,7 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Products section */}
+        {/* Products section – unchanged */}
         {products.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center bg-card">
             <Sparkles className="size-10 text-primary mx-auto mb-3" />
