@@ -33,7 +33,6 @@ function Dashboard() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [referralCode, setReferralCode] = useState<string>("");
-  const [referredBy, setReferredBy] = useState<string | null>(null);
   const [referralBonusApplied, setReferralBonusApplied] = useState(false);
   const [productLimit, setProductLimit] = useState<number>(FREE_PRODUCT_LIMIT);
 
@@ -59,13 +58,12 @@ function Dashboard() {
     if (shopRow) {
       const { data: shopDetails } = await supabase
         .from("shops")
-        .select("referral_code, referred_by, referral_bonus_applied")
+        .select("referral_code, referral_bonus_applied")
         .eq("id", shopRow.id)
         .single();
 
       if (shopDetails) {
         setReferralCode(shopDetails.referral_code || "");
-        setReferredBy(shopDetails.referred_by || null);
         const bonus = shopDetails.referral_bonus_applied === true;
         setReferralBonusApplied(bonus);
         setProductLimit(bonus ? 10 : FREE_PRODUCT_LIMIT);
@@ -207,7 +205,7 @@ function Dashboard() {
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        {/* Green gradient shop link card */}
+        {/* Shop link card */}
         <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
           <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
           <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
@@ -223,35 +221,29 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Referral Section – conditional */}
-        {referredBy ? (
-          // Case 1: User was referred → show congratulations, no referral link
+        {/* Referral Section – only show if no bonus yet, otherwise show congratulations */}
+        {referralBonusApplied ? (
           <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-5 text-center">
             <p className="text-sm font-semibold text-green-600 mb-2">🎉 Congratulations!</p>
-            <p className="text-xs text-muted-foreground mb-2">
-              You signed up using a referral link. As a welcome gift, you get <strong>10 product slots</strong> instead of 5.
-            </p>
             <p className="text-xs text-muted-foreground">
-              Enjoy selling with Duka Link Up!
+              You have <strong>10 product slots</strong> instead of 5. Enjoy selling!
             </p>
           </div>
         ) : !referralCode ? (
-          // Case 2: Direct user without a referral code yet → offer to generate
           <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 text-center">
             <p className="text-sm font-semibold text-primary mb-2">🎁 Get your referral link</p>
             <p className="text-xs text-muted-foreground mb-3">
-              Invite friends and you both get <strong>10 product slots</strong> instead of 5.
+              Invite a friend. When they sign up, you both get <strong>10 product slots</strong> instead of 5.
             </p>
             <Button onClick={generateMissingReferralCode} variant="outline" size="sm">
               Generate my referral link
             </Button>
           </div>
         ) : (
-          // Case 3: Direct user with a referral code → show full referral card
           <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
-            <p className="text-sm font-semibold text-primary mb-2">🎁 Invite friends, get more products!</p>
+            <p className="text-sm font-semibold text-primary mb-2">🎁 Invite a friend, get 10 slots!</p>
             <p className="text-xs text-muted-foreground mb-3">
-              Share your link. When a friend signs up, you both get <strong>{referralBonusApplied ? "already have 10" : "10 free products"}</strong>.
+              Share your link. When they sign up, you both get <strong>10 product slots</strong> instead of 5.
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono break-all">
@@ -262,7 +254,7 @@ function Dashboard() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              ✅ You have <strong>{productLimit}</strong> free product slots {referralBonusApplied && "(bonus applied!)"}
+              ✅ You have <strong>{productLimit}</strong> free product slots.
             </p>
           </div>
         )}
