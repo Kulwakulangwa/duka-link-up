@@ -11,7 +11,6 @@ import {
 import { Copy, ExternalLink, Plus, Settings, LogOut, Pencil, Trash2, Sparkles, Store, Shield } from "lucide-react";
 import { formatTsh, FREE_PRODUCT_LIMIT } from "@/lib/dukalink";
 import { ProductImage } from "@/components/ProductImage";
-import { getFreeProductLimit } from "@/lib/referral";
 
 const ADMIN_EMAIL = "kulwakulangwa@gmail.com";
 
@@ -34,8 +33,8 @@ function Dashboard() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [referralCode, setReferralCode] = useState<string>("");
-  const [productLimit, setProductLimit] = useState<number>(FREE_PRODUCT_LIMIT);
   const [referralBonusApplied, setReferralBonusApplied] = useState(false);
+  const [productLimit, setProductLimit] = useState<number>(FREE_PRODUCT_LIMIT);
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -57,18 +56,19 @@ function Dashboard() {
     setShop(shopRow as any);
 
     if (shopRow) {
-      // Fetch referral info and product limit
+      // Fetch full shop details for referral info
       const { data: shopDetails } = await supabase
         .from("shops")
         .select("referral_code, referral_bonus_applied")
         .eq("id", shopRow.id)
         .single();
-      
+
       if (shopDetails) {
-        setReferralCode(shopDetails.referral_code || "");
-        setReferralBonusApplied(shopDetails.referral_bonus_applied === true);
-        const limit = shopDetails.referral_bonus_applied ? 10 : FREE_PRODUCT_LIMIT;
-        setProductLimit(limit);
+        const code = shopDetails.referral_code || "";
+        setReferralCode(code);
+        const bonus = shopDetails.referral_bonus_applied === true;
+        setReferralBonusApplied(bonus);
+        setProductLimit(bonus ? 10 : FREE_PRODUCT_LIMIT);
       }
 
       const { data: prods } = await supabase
@@ -105,6 +105,22 @@ function Dashboard() {
     if (!referralLink) return;
     await navigator.clipboard.writeText(referralLink);
     toast.success("Referral link copied!");
+  }
+
+  async function generateMissingReferralCode() {
+    if (!shop) return;
+    const newCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const { error } = await supabase
+      .from("shops")
+      .update({ referral_code: newCode })
+      .eq("id", shop.id);
+    if (error) {
+      toast.error("Failed to generate referral link");
+    } else {
+      setReferralCode(newCode);
+      toast.success("Referral link created! Share it with friends.");
+      load(); // reload to refresh everything
+    }
   }
 
   async function toggleStock(p: Product) {
@@ -207,8 +223,18 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Referral Card */}
-        {referralCode && (
+        {/* Referral Section */}
+        {!referralCode ? (
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 text-center">
+            <p className="text-sm font-semibold text-primary mb-2">🎁 Get your referral link</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Invite friends and you both get <strong>10 product slots</strong> instead of 5.
+            </p>
+            <Button onClick={generateMissingReferralCode} variant="outline" size="sm">
+              Generate my referral link
+            </Button>
+          </div>
+        ) : (
           <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
             <p className="text-sm font-semibold text-primary mb-2">🎁 Invite friends, get more products!</p>
             <p className="text-xs text-muted-foreground mb-3">
@@ -228,6 +254,7 @@ function Dashboard() {
           </div>
         )}
 
+        {/* Products section */}
         {products.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center bg-card">
             <Sparkles className="size-10 text-primary mx-auto mb-3" />
