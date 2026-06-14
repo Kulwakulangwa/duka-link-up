@@ -97,7 +97,10 @@ function CreateShopPage() {
 
       // Check for referral parameter
       const urlParams = new URLSearchParams(window.location.search);
-      const refCode = urlParams.get('ref');
+      let refCode = urlParams.get('ref');
+      if (!refCode) {
+        refCode = sessionStorage.getItem('referral_code');
+      }
       
       let referredById: string | null = null;
       let isReferred = false;
@@ -105,6 +108,7 @@ function CreateShopPage() {
       if (refCode) {
         referredById = await getShopIdByReferralCode(refCode);
         isReferred = !!referredById;
+        if (refCode) sessionStorage.removeItem('referral_code');
       }
 
       // Generate referral code ONLY for direct signups (not referred)
@@ -117,9 +121,9 @@ function CreateShopPage() {
         description: sanitize(description, 500) || null,
         location: sanitize(location, 80) || null,
         slug: slug,
-        referral_code: referralCode,          // null for referred users
+        referral_code: referralCode,
         referred_by: referredById,
-        referral_bonus_applied: isReferred,   // true only if referred
+        referral_bonus_applied: isReferred,
       });
 
       if (error) {
