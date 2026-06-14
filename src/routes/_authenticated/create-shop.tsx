@@ -10,6 +10,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { checkSlug } from "@/lib/shop.functions";
 import { ArrowLeft, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { sanitize, slugError } from "@/lib/dukalink";
+import { generateReferralCode, getShopIdByReferralCode } from "@/lib/referral";
 
 export const Route = createFileRoute("/_authenticated/create-shop")({
   head: () => ({ meta: [{ title: "Create Shop — Dukalink" }] }),
@@ -79,12 +80,29 @@ function CreateShopPage() {
         return;
       }
 
+      // Generate unique referral code
+      const referralCode = generateReferralCode();
+
+      // Check if user came from referral link
+      const urlParams = new URLSearchParams(window.location.search);
+      const refCode = urlParams.get('ref');
+      let referredById = null;
+      let bonusApplied = false;
+
+      if (refCode) {
+        referredById = await getShopIdByReferralCode(refCode);
+        bonusApplied = !!referredById;
+      }
+
       const { error } = await supabase.from("shops").insert({
         user_id: userData.user.id,
         name: sanitize(name, 80),
         description: sanitize(description, 500) || null,
         location: sanitize(location, 80) || null,
         slug: slug,
+        referral_code: referralCode,
+        referred_by: referredById,
+        referral_bonus_applied: bonusApplied,
       });
 
       if (error) {
@@ -93,8 +111,24 @@ function CreateShopPage() {
         return;
       }
 
+      // If this user was referred, also give the referrer a bonus (if not already applied)
+      if (bonusApplied && referredById) {
+        // Update referrer's bonus flag if not already set
+        const { data: referrer } = await supabase
+          .from("shops")
+          .select("referral_bonus_applied")
+          .eq("id", referredById)
+          .single();
+
+        if (!referrer?.referral_bonus_applied) {
+          await supabase
+            .from("shops")
+            .update({ referral_bonus_applied: true })
+            .eq("id", referredById);
+        }
+      }
+
       toast.success("Shop created successfully!");
-      // Force full page reload to ensure dashboard sees the new shop
       window.location.href = "/dashboard";
     } catch (err) {
       console.error("Unexpected error:", err);
