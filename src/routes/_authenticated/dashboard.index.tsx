@@ -11,9 +11,9 @@ import {
 import { Copy, ExternalLink, Plus, Settings, LogOut, Pencil, Trash2, Sparkles, Store, Shield } from "lucide-react";
 import { formatTsh, FREE_PRODUCT_LIMIT } from "@/lib/dukalink";
 import { ProductImage } from "@/components/ProductImage";
+import { getFreeProductLimit } from "@/lib/referral";
 
-// Admin email – change this to your own email
-const ADMIN_EMAIL = "kulwakulangwa@gmail.com"; // 👈 Replace with your email
+const ADMIN_EMAIL = "kulwakulangwa@gmail.com";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   head: () => ({ meta: [{ title: "Dashboard — Dukalink" }] }),
@@ -33,6 +33,9 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [referralCode, setReferralCode] = useState<string>("");
+  const [productLimit, setProductLimit] = useState<number>(FREE_PRODUCT_LIMIT);
+  const [referralBonusApplied, setReferralBonusApplied] = useState(false);
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -41,7 +44,6 @@ function Dashboard() {
       return;
     }
 
-    // Check admin status
     if (user.email === ADMIN_EMAIL) {
       setIsAdmin(true);
     }
@@ -55,6 +57,20 @@ function Dashboard() {
     setShop(shopRow as any);
 
     if (shopRow) {
+      // Fetch referral info and product limit
+      const { data: shopDetails } = await supabase
+        .from("shops")
+        .select("referral_code, referral_bonus_applied")
+        .eq("id", shopRow.id)
+        .single();
+      
+      if (shopDetails) {
+        setReferralCode(shopDetails.referral_code || "");
+        setReferralBonusApplied(shopDetails.referral_bonus_applied === true);
+        const limit = shopDetails.referral_bonus_applied ? 10 : FREE_PRODUCT_LIMIT;
+        setProductLimit(limit);
+      }
+
       const { data: prods } = await supabase
         .from("products")
         .select("id,name,price,image_url,in_stock,description")
@@ -77,11 +93,18 @@ function Dashboard() {
   }, []);
 
   const shopUrl = typeof window !== "undefined" && shop ? `${window.location.origin}/${shop.slug}` : "";
+  const referralLink = typeof window !== "undefined" && referralCode ? `${window.location.origin}/auth?ref=${referralCode}` : "";
 
   async function copyLink() {
     if (!shopUrl) return;
     await navigator.clipboard.writeText(shopUrl);
     toast.success("Link copied!");
+  }
+
+  async function copyReferralLink() {
+    if (!referralLink) return;
+    await navigator.clipboard.writeText(referralLink);
+    toast.success("Referral link copied!");
   }
 
   async function toggleStock(p: Product) {
@@ -184,6 +207,27 @@ function Dashboard() {
           </div>
         </div>
 
+        {/* Referral Card */}
+        {referralCode && (
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
+            <p className="text-sm font-semibold text-primary mb-2">🎁 Invite friends, get more products!</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Share your link. When a friend signs up, you both get <strong>{referralBonusApplied ? "already have 10" : "10 free products"}</strong>.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono break-all">
+                {referralLink}
+              </div>
+              <Button onClick={copyReferralLink} variant="outline" size="sm">
+                Copy link
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              ✅ You have <strong>{productLimit}</strong> free product slots {referralBonusApplied && "(bonus applied!)"}
+            </p>
+          </div>
+        )}
+
         {products.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center bg-card">
             <Sparkles className="size-10 text-primary mx-auto mb-3" />
@@ -195,19 +239,22 @@ function Dashboard() {
           </div>
         ) : (
           <>
-            {products.length >= FREE_PRODUCT_LIMIT && (
+            {products.length >= productLimit && (
               <div className="rounded-xl bg-warning/15 border border-warning/40 p-4">
                 <p className="text-sm font-medium text-foreground">
-                  You've hit the free plan limit ({FREE_PRODUCT_LIMIT} products).
+                  You've hit the free plan limit ({productLimit} products).
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">Upgrade to add more — coming soon.</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {!referralBonusApplied && "Invite a friend to get 10 slots!"}
+                  {referralBonusApplied && "Upgrade to add more — coming soon."}
+                </p>
               </div>
             )}
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-foreground">
-                Products <span className="text-muted-foreground font-normal">({products.length}/{FREE_PRODUCT_LIMIT})</span>
+                Products <span className="text-muted-foreground font-normal">({products.length}/{productLimit})</span>
               </h2>
-              <Button asChild size="sm" disabled={products.length >= FREE_PRODUCT_LIMIT}>
+              <Button asChild size="sm" disabled={products.length >= productLimit}>
                 <Link to="/dashboard/add"><Plus className="size-4 mr-1" /> Add product</Link>
               </Button>
             </div>
