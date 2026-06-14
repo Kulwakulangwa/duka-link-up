@@ -10,7 +10,21 @@ import { useServerFn } from "@tanstack/react-start";
 import { checkSlug } from "@/lib/shop.functions";
 import { ArrowLeft, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { sanitize, slugError } from "@/lib/dukalink";
-import { generateReferralCode, getShopIdByReferralCode } from "@/lib/referral";
+
+// Helper: generate random code (only for direct signups)
+function generateReferralCode(): string {
+  return Math.random().toString(36).substring(2, 10).toUpperCase();
+}
+
+// Helper: get shop ID by referral code
+async function getShopIdByReferralCode(code: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("shops")
+    .select("id")
+    .eq("referral_code", code)
+    .maybeSingle();
+  return data?.id || null;
+}
 
 export const Route = createFileRoute("/_authenticated/create-shop")({
   head: () => ({ meta: [{ title: "Create Shop — Dukalink" }] }),
@@ -45,7 +59,7 @@ function CreateShopPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!name.trim()) {
       toast.error("Shop name is required");
       return;
@@ -68,7 +82,7 @@ function CreateShopPage() {
         return;
       }
 
-      // Check if user already has a shop
+      // Check existing shop
       const { data: existingShop } = await supabase
         .from("shops")
         .select("id")
@@ -81,50 +95,48 @@ function CreateShopPage() {
         return;
       }
 
-      // Generate a unique referral code
-      const referralCode = generateReferralCode();
-
-      // Check URL for referral parameter
+      // Check for referral parameter
       const urlParams = new URLSearchParams(window.location.search);
-      const refCode = urlParams.get("ref");
+      const refCode = urlParams.get('ref');
+      
       let referredById: string | null = null;
-      let bonusApplied = false;
+      let isReferred = false;
 
       if (refCode) {
         referredById = await getShopIdByReferralCode(refCode);
-        if (referredById) {
-          bonusApplied = true;
-          console.log(`New shop referred by ${referredById}`);
-        }
+        isReferred = !!referredById;
       }
 
-      // Insert the shop
-      const { error: insertError } = await supabase.from("shops").insert({
+      // Generate referral code ONLY for direct signups (not referred)
+      const referralCode = isReferred ? null : generateReferralCode();
+
+      // Insert shop
+      const { error } = await supabase.from("shops").insert({
         user_id: userData.user.id,
         name: sanitize(name, 80),
         description: sanitize(description, 500) || null,
         location: sanitize(location, 80) || null,
         slug: slug,
-        referral_code: referralCode,
+        referral_code: referralCode,          // null for referred users
         referred_by: referredById,
-        referral_bonus_applied: bonusApplied,
+        referral_bonus_applied: isReferred,   // true only if referred
       });
 
-      if (insertError) {
-        console.error("Shop creation error:", insertError);
-        toast.error("Could not create shop: " + insertError.message);
+      if (error) {
+        console.error("Shop creation error:", error);
+        toast.error("Could not create shop: " + error.message);
         return;
       }
 
-      // If this user was referred, also give the referrer the bonus (if not already applied)
-      if (bonusApplied && referredById) {
+      // If this user was referred, give the referrer the bonus too
+      if (isReferred && referredById) {
         const { data: referrer } = await supabase
           .from("shops")
           .select("referral_bonus_applied")
           .eq("id", referredById)
           .single();
-
-        if (!referrer?.referral_bonus_applied) {
+        
+        if (referrer && !referrer.referral_bonus_applied) {
           await supabase
             .from("shops")
             .update({ referral_bonus_applied: true })
@@ -152,7 +164,7 @@ function CreateShopPage() {
           <h1 className="font-bold text-foreground">Create Your Shop</h1>
         </div>
       </header>
-
+      
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto px-5 py-6 space-y-5">
         <div>
           <Label htmlFor="name">Shop Name *</Label>
