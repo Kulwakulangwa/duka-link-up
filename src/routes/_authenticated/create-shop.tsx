@@ -11,19 +11,18 @@ import { checkSlug } from "@/lib/shop.functions";
 import { ArrowLeft, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { sanitize, slugError } from "@/lib/dukalink";
 
+// Generate a unique referral code for direct signups
 function generateReferralCode(): string {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 }
 
+// Look up a shop by its referral code
 async function getShopIdByReferralCode(code: string): Promise<string | null> {
-  console.log("🔍 Looking up referral code:", code);
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("shops")
     .select("id")
     .eq("referral_code", code)
     .maybeSingle();
-  if (error) console.error("❌ Lookup error:", error);
-  console.log("✅ Lookup result:", data?.id || null);
   return data?.id || null;
 }
 
@@ -83,6 +82,7 @@ function CreateShopPage() {
         return;
       }
 
+      // Check if user already has a shop
       const { data: existingShop } = await supabase
         .from("shops")
         .select("id")
@@ -95,30 +95,19 @@ function CreateShopPage() {
         return;
       }
 
-      // Capture referral code (URL param first, then sessionStorage)
-      const urlParams = new URLSearchParams(window.location.search);
-      let refCode = urlParams.get('ref');
-      console.log("📌 URL param refCode:", refCode);
-      if (!refCode) {
-        refCode = sessionStorage.getItem('referral_code');
-        console.log("📌 sessionStorage refCode:", refCode);
-      }
-
+      // Get referral code from user_metadata (set during signup)
+      const refCode = userData.user.user_metadata?.referral_code as string | undefined;
       let referredById: string | null = null;
       let isReferred = false;
 
       if (refCode) {
-        console.log("🔁 Attempting to resolve referral code:", refCode);
         referredById = await getShopIdByReferralCode(refCode);
         isReferred = !!referredById;
-        console.log("👉 Resolved to shop ID:", referredById, "isReferred:", isReferred);
-        sessionStorage.removeItem('referral_code');
-      } else {
-        console.log("❌ No referral code found in URL or sessionStorage");
+        // Optional: clear metadata after use? Not necessary.
       }
 
+      // Direct users get a referral code; referred users do not
       const referralCode = isReferred ? null : generateReferralCode();
-      console.log("📦 Generated own referral code (if direct):", referralCode);
 
       const { error } = await supabase.from("shops").insert({
         user_id: userData.user.id,
@@ -132,12 +121,11 @@ function CreateShopPage() {
       });
 
       if (error) {
-        console.error("❌ Insert error:", error);
+        console.error("Insert error:", error);
         toast.error("Could not create shop: " + error.message);
         return;
       }
 
-      console.log("✅ Shop inserted successfully. referred_by:", referredById);
       toast.success("Shop created successfully!");
       window.location.href = "/dashboard";
     } catch (err) {
