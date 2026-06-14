@@ -11,12 +11,10 @@ import { checkSlug } from "@/lib/shop.functions";
 import { ArrowLeft, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { sanitize, slugError } from "@/lib/dukalink";
 
-// Generate a unique referral code for direct signups
 function generateReferralCode(): string {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 }
 
-// Look up a shop by its referral code
 async function getShopIdByReferralCode(code: string): Promise<string | null> {
   const { data } = await supabase
     .from("shops")
@@ -82,7 +80,6 @@ function CreateShopPage() {
         return;
       }
 
-      // Check if user already has a shop
       const { data: existingShop } = await supabase
         .from("shops")
         .select("id")
@@ -95,7 +92,7 @@ function CreateShopPage() {
         return;
       }
 
-      // Get referral code from user_metadata (set during signup)
+      // Read referral code from user_metadata (set during signup)
       const refCode = userData.user.user_metadata?.referral_code as string | undefined;
       let referredById: string | null = null;
       let isReferred = false;
@@ -103,10 +100,8 @@ function CreateShopPage() {
       if (refCode) {
         referredById = await getShopIdByReferralCode(refCode);
         isReferred = !!referredById;
-        // Optional: clear metadata after use? Not necessary.
       }
 
-      // Direct users get a referral code; referred users do not
       const referralCode = isReferred ? null : generateReferralCode();
 
       const { error } = await supabase.from("shops").insert({
