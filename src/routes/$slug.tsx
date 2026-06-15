@@ -248,9 +248,12 @@ function ShopPage() {
                   <div className="p-2 sm:p-3">
                     <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">{product.name}</h3>
                     <p className="text-primary font-bold text-sm sm:text-base mt-1">{formatTsh(product.price)}</p>
-                    {/* ✅ Fixed description: preserves line breaks and spaces, visible on all screens */}
+                    {/* ✅ Fixed: preserves line breaks and spaces exactly as typed */}
                     {product.description && (
-                      <p className="text-muted-foreground text-xs sm:text-sm mt-2 whitespace-pre-wrap break-words">
+                      <p
+                        className="text-muted-foreground text-xs sm:text-sm mt-2"
+                        style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                      >
                         {product.description}
                       </p>
                     )}
@@ -269,13 +272,12 @@ function ShopPage() {
         </div>
       </main>
 
-      {/* Footer with green "Create your own shop" link */}
       <footer className="border-t border-border mt-12 py-6 text-center text-muted-foreground text-sm">
         <p>Powered by Duka Link Up</p>
         <p className="mt-2">
-          <a 
-            href="https://dukalinkup.royotechtz.cc" 
-            target="_blank" 
+          <a
+            href="https://dukalinkup.royotechtz.cc"
+            target="_blank"
             rel="noopener noreferrer"
             className="text-green-500 hover:text-green-400 transition-colors"
           >
