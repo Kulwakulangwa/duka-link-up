@@ -248,17 +248,18 @@ function ShopPage() {
                   <div className="p-2 sm:p-3">
                     <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">{product.name}</h3>
                     <p className="text-primary font-bold text-sm sm:text-base mt-1">{formatTsh(product.price)}</p>
+                    {/* ✅ Fixed description: preserves line breaks and spaces, visible on all screens */}
                     {product.description && (
-                      <p className="text-muted-foreground text-xs sm:text-sm mt-1 line-clamp-2 hidden sm:block">
+                      <p className="text-muted-foreground text-xs sm:text-sm mt-2 whitespace-pre-wrap break-words">
                         {product.description}
                       </p>
                     )}
                     <Button
                       onClick={() => handleWhatsAppOrder(product.name, product.price)}
-                      className="w-full mt-2 sm:mt-3 bg-green-600 hover:bg-green-700 text-white gap-1 sm:gap-2 text-xs sm:text-sm"
+                      className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white gap-2"
                       size="sm"
                     >
-                      <Phone className="size-3 sm:size-4" /> Order
+                      <Phone className="size-4" /> Order
                     </Button>
                   </div>
                 </div>
@@ -268,7 +269,7 @@ function ShopPage() {
         </div>
       </main>
 
-      {/* ✅ Updated footer with green "Create your own shop" link */}
+      {/* Footer with green "Create your own shop" link */}
       <footer className="border-t border-border mt-12 py-6 text-center text-muted-foreground text-sm">
         <p>Powered by Duka Link Up</p>
         <p className="mt-2">
