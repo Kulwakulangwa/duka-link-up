@@ -32,10 +32,20 @@ function AuthPage() {
   }, [navigate]);
 
   return (
-    <main className="min-h-screen flex flex-col bg-gradient-to-br from-green-700 via-green-600 to-teal-700 relative overflow-hidden">
-      {/* Decorative circles */}
-      <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/10 rounded-full blur-2xl" />
-      <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-emerald-400/20 rounded-full blur-3xl" />
+    <main
+      className="min-h-screen flex flex-col relative overflow-hidden"
+      style={{
+        backgroundImage: "url(/hero-seller.jpg)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      {/* Dark overlay for readability */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+      {/* Decorative circles (still visible but subtle) */}
+      <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/5 rounded-full blur-2xl" />
+      <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-white/5 rounded-full blur-3xl" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/5 rounded-full blur-3xl" />
 
       {/* Back button */}
