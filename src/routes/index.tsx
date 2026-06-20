@@ -3,19 +3,24 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageCircle, ShoppingBag, Zap, Store, Rocket, ChevronDown } from "lucide-react";
 import { ReactNode, useState } from "react";
 
-// ---------- Simple feature card (no dark glass) ----------
+// ---------- UPDATED Feature card ----------
 function FeatureCard({ step, title, description, icon }: { step: number; title: string; description: string; icon?: ReactNode }) {
   return (
-    <div className="rounded-2xl bg-card border border-border p-6 shadow-sm hover:shadow-md transition">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-2xl font-bold text-primary/60">0{step}</span>
-        <span className="h-px flex-1 bg-border" />
+    <div className="relative">
+      <div className="rounded-2xl bg-card border border-border/70 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 h-full">
+        <div className="flex items-center gap-3 mb-5">
+          <span className="relative z-10 flex items-center justify-center size-9 rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0 ring-4 ring-background">
+            {step}
+          </span>
+          {icon && (
+            <div className="flex items-center justify-center size-9 rounded-xl bg-primary/10 text-primary shrink-0">
+              {icon}
+            </div>
+          )}
+        </div>
+        <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+        <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
       </div>
-      <div className="flex items-start gap-3 mb-3">
-        {icon && <div className="shrink-0 text-primary">{icon}</div>}
-        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-      </div>
-      <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -150,11 +155,11 @@ function Landing() {
               <p className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/15 text-accent text-xs font-medium mb-6">
                 For sellers in Tanzania 🇹🇿
               </p>
-              {/* ✅ UPDATED HEADLINE */}
+              {/* ✅ Headline */}
               <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.05]">
                 Status zako zinaondoka<br/>baada ya masaa 24?
               </h1>
-              {/* ✅ UPDATED SUBTEXT with green "FOREVER" */}
+              {/* ✅ Subtext with green "FOREVER" */}
               <p className="mt-5 text-lg text-white/70 max-w-xl mx-auto lg:mx-0">
                 Tumia Dukalink — wateja wako wataona bidhaa au huduma zako{' '}
                 <span className="text-primary">FOREVER</span>.
@@ -194,13 +199,17 @@ function Landing() {
         </section>
       </div>
 
-      {/* Steps in simple cards */}
+      {/* ✅ UPDATED "Steps in simple cards" section */}
       <section className="px-5 pb-20 max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-foreground">How to start selling</h2>
+        <div className="text-center mb-14">
+          <p className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4 tracking-wide uppercase">
+            Jinsi inavyofanya kazi
+          </p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground">How to start selling</h2>
           <p className="text-muted-foreground mt-2">Four simple steps, and you're live</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="hidden lg:block absolute top-[2.75rem] left-[12.5%] right-[12.5%] h-px bg-border" />
           {steps.map((step) => (
             <FeatureCard
               key={step.step}
