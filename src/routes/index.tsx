@@ -111,32 +111,85 @@ function Landing() {
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="px-5 py-4 flex items-center justify-between max-w-5xl mx-auto">
-        <Link to="/" className="font-bold text-lg tracking-tight text-primary">dukalink</Link>
-        <Link to="/auth" className="text-sm font-medium text-foreground hover:text-primary">Get started</Link>
-      </header>
+      {/* Hero with background photo */}
+      <div 
+        className="relative overflow-hidden text-white rounded-b-[2rem] sm:rounded-b-[3rem]"
+        style={{
+          backgroundImage: "url(/hero-seller.jpg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-      {/* Hero */}
-      <section className="px-5 pt-10 pb-16 max-w-3xl mx-auto text-center">
-        <p className="inline-block px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium mb-6">
-          For sellers in Tanzania 🇹🇿
-        </p>
-        <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-foreground leading-[1.05]">
-          Uza zaidi.<br/>Haraka zaidi.
-        </h1>
-        <p className="mt-5 text-lg text-muted-foreground max-w-xl mx-auto">
-          Create your free shop in 60 seconds. Share on WhatsApp. Get orders today.
-        </p>
-        <div className="mt-8">
-          <Button asChild size="lg" className="h-14 px-7 text-base rounded-xl font-semibold shadow-lg shadow-primary/20">
-            <Link to="/auth">
-              Create your free shop <ArrowRight className="ml-2 size-5" />
-            </Link>
-          </Button>
-        </div>
-        <p className="mt-4 text-xs text-muted-foreground">No card. No fees. 5 products free.</p>
-      </section>
+        {/* Decorative glows (still visible) */}
+        <div className="pointer-events-none absolute -top-32 -right-24 size-[26rem] rounded-full bg-primary/25 blur-[110px]" />
+        <div className="pointer-events-none absolute top-1/2 -left-32 size-[20rem] rounded-full bg-accent/10 blur-[110px]" />
+        
+        {/* Dot pattern */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.12]"
+          style={{
+            backgroundImage: "radial-gradient(circle, rgba(134,239,172,0.6) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+
+        {/* Header */}
+        <header className="relative z-10 px-5 py-4 flex items-center justify-between max-w-6xl mx-auto">
+          <Link to="/" className="font-bold text-lg tracking-tight text-white">dukalink</Link>
+          <Link to="/auth" className="text-sm font-medium text-white/80 hover:text-white transition-colors">Get started</Link>
+        </header>
+
+        {/* Hero content */}
+        <section className="relative z-10 px-5 pt-8 pb-20 sm:pb-28 max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-10 items-center">
+            {/* Text column */}
+            <div className="text-center lg:text-left order-2 lg:order-1">
+              <p className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/15 text-accent text-xs font-medium mb-6">
+                For sellers in Tanzania 🇹🇿
+              </p>
+              <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.05]">
+                Uza zaidi.<br/>Haraka <span className="text-primary">zaidi.</span>
+              </h1>
+              <p className="mt-5 text-lg text-white/70 max-w-xl mx-auto lg:mx-0">
+                Create your free shop in 60 seconds. Share on WhatsApp. Get orders today.
+              </p>
+              <div className="mt-8 flex justify-center lg:justify-start">
+                <Button asChild size="lg" className="h-14 px-7 text-base rounded-xl font-semibold shadow-lg shadow-primary/30">
+                  <Link to="/auth">
+                    Create your free shop <ArrowRight className="ml-2 size-5" />
+                  </Link>
+                </Button>
+              </div>
+              <p className="mt-4 text-xs text-white/50">No card. No fees. 5 products free.</p>
+            </div>
+
+            {/* Image column (preview card – optional) */}
+            <div className="order-1 lg:order-2">
+              <div className="relative mx-auto max-w-sm lg:max-w-none lg:ml-auto">
+                <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-primary/30 via-transparent to-accent/20 blur-xl" />
+                <img
+                  src="/hero-seller.jpg"
+                  alt="Muuzaji akitumia dukalink kuonyesha duka lake la mtandaoni"
+                  className="relative rounded-[1.75rem] shadow-2xl shadow-black/50 ring-1 ring-white/10 w-full object-cover aspect-[4/5] lg:aspect-[3/4]"
+                />
+                {/* floating notification card */}
+                <div className="absolute -bottom-5 -left-5 sm:-left-8 bg-white text-foreground rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3">
+                  <span className="flex size-9 items-center justify-center rounded-full bg-whatsapp text-whatsapp-foreground shrink-0">
+                    <MessageCircle className="size-5" />
+                  </span>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold leading-tight">Order mpya!</p>
+                    <p className="text-xs text-muted-foreground leading-tight">Toyota Spade · TSh 17,500,000</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
 
       {/* Steps in simple cards */}
       <section className="px-5 pb-20 max-w-6xl mx-auto">
