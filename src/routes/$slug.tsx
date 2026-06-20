@@ -102,19 +102,32 @@ function ShopPage() {
     });
   };
 
+  // ✅ IMPROVED WhatsApp handler with fallback
   const handleWhatsAppOrder = (productName?: string, productPrice?: number) => {
     if (!shop?.whatsapp_number) {
       toast.error("Shop WhatsApp number not set");
       return;
     }
+
+    // Try the library function first
     let phone = normalizeWhatsApp(shop.whatsapp_number);
+
+    // If it fails, construct manually
     if (!phone) {
       let raw = shop.whatsapp_number.replace(/\D/g, "");
       if (raw.startsWith("0")) raw = "255" + raw.slice(1);
-      if (!raw.startsWith("255")) raw = "255" + raw;
-      phone = "+" + raw;
+      if (!raw.startsWith("255") && raw.length >= 9) raw = "255" + raw;
+      if (raw.length >= 9) phone = "+" + raw;
     }
+
+    // Final validation
+    if (!phone || phone.length < 10) {
+      toast.error("Invalid WhatsApp number. Please update it in settings.");
+      return;
+    }
+
     phone = phone.replace(/\s+/g, "");
+
     let message: string;
     if (productName && productPrice !== undefined) {
       message = `Hello! I'd like to order "${productName}" priced at ${formatTsh(productPrice)} from ${shop.name}.`;
