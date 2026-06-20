@@ -150,11 +150,14 @@ function Landing() {
               <p className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/15 text-accent text-xs font-medium mb-6">
                 For sellers in Tanzania 🇹🇿
               </p>
+              {/* ✅ UPDATED HEADLINE */}
               <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.05]">
-                Uza zaidi.<br/>Haraka <span className="text-primary">zaidi.</span>
+                Status zako zinaondoka<br/>baada ya masaa 24?
               </h1>
+              {/* ✅ UPDATED SUBTEXT with green "FOREVER" */}
               <p className="mt-5 text-lg text-white/70 max-w-xl mx-auto lg:mx-0">
-                Create your free shop in 60 seconds. Share on WhatsApp. Get orders today.
+                Tumia Dukalink — wateja wako wataona bidhaa au huduma zako{' '}
+                <span className="text-primary">FOREVER</span>.
               </p>
               <div className="mt-8 flex justify-center lg:justify-start">
                 <Button asChild size="lg" className="h-14 px-7 text-base rounded-xl font-semibold shadow-lg shadow-primary/30">
@@ -166,7 +169,7 @@ function Landing() {
               <p className="mt-4 text-xs text-white/50">No card. No fees. 5 products free.</p>
             </div>
 
-            {/* Image column (preview card – optional) */}
+            {/* Image column (preview card) */}
             <div className="order-1 lg:order-2">
               <div className="relative mx-auto max-w-sm lg:max-w-none lg:ml-auto">
                 <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-primary/30 via-transparent to-accent/20 blur-xl" />
