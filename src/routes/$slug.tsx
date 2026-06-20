@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Store, MapPin, Clock, Phone, Share2, Check, Moon, Sun } from "lucide-react";
+import { Store, MapPin, Clock, Phone, Share2, Check } from "lucide-react";
 import { formatTsh, normalizeWhatsApp } from "@/lib/dukalink";
 import { toast } from "sonner";
 
@@ -36,21 +36,10 @@ function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
 
-  // Toggle dark mode for this page only
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    if (newMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
-
-  // Reset to light mode when navigating away
+  // Force dark mode on this page
   useEffect(() => {
+    document.documentElement.classList.add('dark');
     return () => {
       document.documentElement.classList.remove('dark');
     };
@@ -183,15 +172,9 @@ function ShopPage() {
             )}
             <span className="font-semibold truncate">{shop.name}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={toggleDarkMode}>
-              {darkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
-              <span className="sr-only">Toggle dark mode</span>
-            </Button>
-            <Button variant="ghost" size="sm" onClick={shareShop}>
-              {copied ? <Check className="size-4" /> : <Share2 className="size-4" />}
-            </Button>
-          </div>
+          <Button variant="ghost" size="sm" onClick={shareShop}>
+            {copied ? <Check className="size-4" /> : <Share2 className="size-4" />}
+          </Button>
         </div>
       </header>
 
