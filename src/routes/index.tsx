@@ -3,8 +3,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageCircle, ShoppingBag, Zap, Store, Rocket, ChevronDown } from "lucide-react";
 import { ReactNode, useState } from "react";
 
-// ---------- UPDATED Feature card ----------
-function FeatureCard({ step, title, description, icon }: { step: number; title: string; description: string; icon?: ReactNode }) {
+// ---------- UPDATED Feature card with Swahili description ----------
+function FeatureCard({ step, title, description, swahiliDescription, icon }: { 
+  step: number; 
+  title: string; 
+  description: string; 
+  swahiliDescription: string;
+  icon?: ReactNode 
+}) {
   return (
     <div className="relative">
       <div className="rounded-2xl bg-card border border-border/70 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 h-full">
@@ -19,7 +25,12 @@ function FeatureCard({ step, title, description, icon }: { step: number; title: 
           )}
         </div>
         <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+        {/* English description */}
         <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
+        {/* Swahili translation */}
+        <p className="text-muted-foreground/70 text-sm leading-relaxed mt-2 border-t border-border/40 pt-2">
+          {swahiliDescription}
+        </p>
       </div>
     </div>
   );
@@ -65,24 +76,28 @@ function Landing() {
       step: 1,
       title: "Sign up",
       description: "Create an account with your email. No credit card required. Free forever for 5 products.",
+      swahiliDescription: "Jisajili kwa barua pepe yako. Hakuna kadi ya mkopo. Bure kabisa kwa bidhaa 5.",
       icon: <Rocket className="size-5" />,
     },
     {
       step: 2,
       title: "Create your shop",
       description: "Name your shop, choose a unique link (dukalink.app/your-name), and add your WhatsApp number.",
+      swahiliDescription: "Taja duka lako, chagua kiungo cha kipekee (dukalink.app/jina-lako), na ongeza namba yako ya WhatsApp.",
       icon: <Store className="size-5" />,
     },
     {
       step: 3,
       title: "Add products",
       description: "Upload photos, set prices, and write descriptions. Your products appear instantly on your public shop page.",
+      swahiliDescription: "Pakia picha, weka bei, na andika maelezo. Bidhaa zako zitaonekana kwenye ukurasa wako wa duka mara moja.",
       icon: <ShoppingBag className="size-5" />,
     },
     {
       step: 4,
       title: "Share & sell",
       description: "Share your link on WhatsApp, Instagram, or anywhere. Customers order with one tap via WhatsApp.",
+      swahiliDescription: "Shiriki kiungo chako kwenye WhatsApp, Instagram, au popote. Wateja wanaweza kuagiza kwa kugonga kitufe kimoja kupitia WhatsApp.",
       icon: <MessageCircle className="size-5" />,
     },
   ];
@@ -155,11 +170,9 @@ function Landing() {
               <p className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/15 text-accent text-xs font-medium mb-6">
                 For sellers in Tanzania 🇹🇿
               </p>
-              {/* ✅ Headline */}
               <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.05]">
                 Status zako zinaondoka<br/>baada ya masaa 24?
               </h1>
-              {/* ✅ Subtext with green "FOREVER" */}
               <p className="mt-5 text-lg text-white/70 max-w-xl mx-auto lg:mx-0">
                 Tumia Dukalink — wateja wako wataona bidhaa au huduma zako{' '}
                 <span className="text-primary">FOREVER</span>.
@@ -199,7 +212,7 @@ function Landing() {
         </section>
       </div>
 
-      {/* ✅ UPDATED "Steps in simple cards" section */}
+      {/* Steps section with Swahili translations */}
       <section className="px-5 pb-20 max-w-6xl mx-auto">
         <div className="text-center mb-14">
           <p className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4 tracking-wide uppercase">
@@ -216,6 +229,7 @@ function Landing() {
               step={step.step}
               title={step.title}
               description={step.description}
+              swahiliDescription={step.swahiliDescription}
               icon={step.icon}
             />
           ))}
