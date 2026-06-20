@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Store } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in or create your shop — Dukalink" }] }),
@@ -32,32 +32,57 @@ function AuthPage() {
   }, [navigate]);
 
   return (
-    <main className="min-h-screen bg-background flex flex-col">
-      <header className="px-5 py-4 max-w-5xl w-full mx-auto">
-        <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4 mr-1" /> Back
+    <main className="min-h-screen flex flex-col bg-gradient-to-br from-green-700 via-green-600 to-teal-700 relative overflow-hidden">
+      {/* Decorative circles */}
+      <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/10 rounded-full blur-2xl" />
+      <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-emerald-400/20 rounded-full blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/5 rounded-full blur-3xl" />
+
+      {/* Back button */}
+      <header className="relative z-10 px-5 py-4 max-w-5xl w-full mx-auto">
+        <Link to="/" className="inline-flex items-center text-sm text-white/80 hover:text-white transition-colors gap-1.5">
+          <ArrowLeft className="size-4" /> Back
         </Link>
       </header>
-      <div className="flex-1 px-5 pb-12 flex items-start justify-center">
+
+      {/* Auth card */}
+      <div className="flex-1 relative z-10 flex items-center justify-center px-5 pb-12">
         <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold text-foreground mb-1">
-            {mode === "signup" ? "Create your account" : "Welcome back"}
-          </h1>
-          <p className="text-muted-foreground mb-6">
-            {mode === "signup" ? "Sign up to start your shop." : "Sign in to your dashboard."}
-          </p>
-          {mode === "signup" ? <SignupForm /> : <SigninForm />}
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {mode === "signup" ? (
-              <>Already have an account?{" "}
-                <button onClick={() => setMode("signin")} className="text-primary font-medium hover:underline">Sign in</button>
-              </>
-            ) : (
-              <>New here?{" "}
-                <button onClick={() => setMode("signup")} className="text-primary font-medium hover:underline">Create an account</button>
-              </>
-            )}
-          </p>
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl p-8 sm:p-10">
+            <div className="flex justify-center mb-6">
+              <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+                <Store className="size-8 text-white" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-1 text-center">
+              {mode === "signup" ? "Create your account" : "Welcome back"}
+            </h1>
+            <p className="text-white/70 text-center mb-6">
+              {mode === "signup" ? "Sign up to start your shop." : "Sign in to your dashboard."}
+            </p>
+            {mode === "signup" ? <SignupForm /> : <SigninForm />}
+            <p className="mt-6 text-center text-sm text-white/70">
+              {mode === "signup" ? (
+                <>Already have an account?{" "}
+                  <button
+                    onClick={() => setMode("signin")}
+                    className="text-white font-medium hover:underline hover:text-white/90 transition-colors"
+                  >
+                    Sign in
+                  </button>
+                </>
+              ) : (
+                <>New here?{" "}
+                  <button
+                    onClick={() => setMode("signup")}
+                    className="text-white font-medium hover:underline hover:text-white/90 transition-colors"
+                  >
+                    Create an account
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
         </div>
       </div>
     </main>
@@ -82,14 +107,34 @@ function SigninForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-12" autoComplete="email" />
+        <Label htmlFor="email" className="text-white/80">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="h-11 bg-white/20 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/30"
+          autoComplete="email"
+        />
       </div>
       <div>
-        <Label htmlFor="password">Password</Label>
-        <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="h-12" autoComplete="current-password" />
+        <Label htmlFor="password" className="text-white/80">Password</Label>
+        <Input
+          id="password"
+          type="password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="h-11 bg-white/20 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/30"
+          autoComplete="current-password"
+        />
       </div>
-      <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading}>
+      <Button
+        type="submit"
+        className="w-full h-11 text-base font-semibold bg-white text-green-700 hover:bg-white/90 hover:text-green-800 shadow-lg shadow-black/20"
+        disabled={loading}
+      >
         {loading ? <Loader2 className="size-4 animate-spin" /> : "Sign in"}
       </Button>
     </form>
@@ -117,7 +162,7 @@ function SignupForm() {
       password,
       options: {
         emailRedirectTo: window.location.origin,
-        data: { referral_code: refCode || null }   // stored in user_metadata
+        data: { referral_code: refCode || null },
       },
     });
 
@@ -134,15 +179,36 @@ function SignupForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-12" autoComplete="email" />
+        <Label htmlFor="email" className="text-white/80">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="h-11 bg-white/20 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/30"
+          autoComplete="email"
+        />
       </div>
       <div>
-        <Label htmlFor="password">Password</Label>
-        <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="h-12" autoComplete="new-password" />
-        <p className="text-xs text-muted-foreground mt-1">At least 8 characters</p>
+        <Label htmlFor="password" className="text-white/80">Password</Label>
+        <Input
+          id="password"
+          type="password"
+          required
+          minLength={8}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="h-11 bg-white/20 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/30"
+          autoComplete="new-password"
+        />
+        <p className="text-xs text-white/60 mt-1">At least 8 characters</p>
       </div>
-      <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading}>
+      <Button
+        type="submit"
+        className="w-full h-11 text-base font-semibold bg-white text-green-700 hover:bg-white/90 hover:text-green-800 shadow-lg shadow-black/20"
+        disabled={loading}
+      >
         {loading ? <Loader2 className="size-4 animate-spin" /> : "Sign up"}
       </Button>
     </form>
