@@ -114,10 +114,20 @@ function ShopPage() {
 
     // If it fails, construct manually
     if (!phone) {
+      // Remove all non-digits
       let raw = shop.whatsapp_number.replace(/\D/g, "");
-      if (raw.startsWith("0")) raw = "255" + raw.slice(1);
-      if (!raw.startsWith("255") && raw.length >= 9) raw = "255" + raw;
-      if (raw.length >= 9) phone = "+" + raw;
+      // If it starts with 0, replace with 255 (Tanzania)
+      if (raw.startsWith("0")) {
+        raw = "255" + raw.slice(1);
+      }
+      // If it doesn't start with 255, assume it's a local number without country code
+      if (!raw.startsWith("255") && raw.length >= 9) {
+        raw = "255" + raw;
+      }
+      // Ensure we have at least 9 digits (Tanzania local numbers are 9 digits)
+      if (raw.length >= 9) {
+        phone = "+" + raw;
+      }
     }
 
     // Final validation
@@ -126,6 +136,7 @@ function ShopPage() {
       return;
     }
 
+    // Remove any extra spaces
     phone = phone.replace(/\s+/g, "");
 
     let message: string;
