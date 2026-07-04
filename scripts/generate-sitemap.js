@@ -8,9 +8,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
-);
+ https://rkylzxxkckbxucpnktar.supabase.co,
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJreWx6eHhrY2tieHVjcG5rdGFyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEzODAyOCwiZXhwIjoyMDk2NzE0MDI4fQ.3CPz9YiK6ljzwJH56m0jTlSRxjrQuU8pN1pV8KogT6o);
 
 async function generateSitemap() {
   try {
