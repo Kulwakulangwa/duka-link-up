@@ -6,9 +6,11 @@ import { Store, MapPin, Clock, Phone, Share2, Check } from "lucide-react";
 import { formatTsh, normalizeWhatsApp } from "@/lib/dukalink";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/$slug")({
-  component: ShopPage,
-});
+// Define types for loader data
+type LoaderData = {
+  shop: Shop | null;
+  products: Product[];
+};
 
 type Shop = {
   id: string;
@@ -17,7 +19,7 @@ type Shop = {
   description: string | null;
   whatsapp_number: string | null;
   location: string | null;
-  avatar_signed_url: string | null;
+  avatar_url: string | null;
   created_at: string;
 };
 
@@ -26,15 +28,73 @@ type Product = {
   name: string;
   price: number;
   description: string | null;
-  image_signed_url: string | null;
+  image_url: string | null;
   in_stock: boolean;
 };
 
+// Loader function to fetch shop data for SEO
+export const Route = createFileRoute("/$slug")({
+  loader: async ({ params }): Promise<LoaderData> => {
+    const { slug } = params;
+    const { data: shop } = await supabase
+      .from("shops")
+      .select("id, slug, name, description, whatsapp_number, location, avatar_url, created_at")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (!shop) {
+      return { shop: null, products: [] };
+    }
+
+    const { data: products } = await supabase
+      .from("products")
+      .select("id, name, price, description, image_url, in_stock")
+      .eq("shop_id", shop.id)
+      .eq("in_stock", true)
+      .order("created_at", { ascending: false });
+
+    return { shop, products: products || [] };
+  },
+  head: ({ loaderData }) => {
+    const { shop, products } = loaderData as LoaderData;
+    if (!shop) {
+      return {
+        meta: [
+          { title: "Shop not found — Dukalink" },
+          { name: "description", content: "This shop does not exist." },
+        ],
+      };
+    }
+    const title = `${shop.name} — Dukalink`;
+    const description = shop.description || `Shop at ${shop.name} on Dukalink. Products: ${products.map(p => p.name).join(', ')}.`;
+    const imageUrl = shop.avatar_url
+      ? `${process.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/shop-images/${shop.avatar_url}`
+      : null;
+
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: typeof window !== "undefined" ? window.location.href : `https://dukalinkup.royotechtz.cc/${shop.slug}` },
+        imageUrl ? { property: "og:image", content: imageUrl } : null,
+        { name: "twitter:card", content: "summary_large_image" },
+      ].filter(Boolean),
+    };
+  },
+  component: ShopPage,
+});
+
+// Component using loader data
 function ShopPage() {
   const { slug } = Route.useParams();
-  const [shop, setShop] = useState<Shop | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const loaderData = Route.useLoaderData() as LoaderData;
+  const { shop: initialShop, products: initialProducts } = loaderData;
+
+  const [shop, setShop] = useState<Shop | null>(initialShop);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [copied, setCopied] = useState(false);
 
   // Force dark mode on this page
@@ -45,56 +105,6 @@ function ShopPage() {
     };
   }, []);
 
-  useEffect(() => {
-    async function loadShop() {
-      try {
-        const { data: shopData } = await supabase
-          .from("shops")
-          .select("id, slug, name, description, whatsapp_number, location, avatar_url, created_at")
-          .eq("slug", slug)
-          .maybeSingle();
-        if (!shopData) {
-          setLoading(false);
-          return;
-        }
-        let avatar_signed_url = null;
-        if (shopData.avatar_url) {
-          const { data: signedUrl } = await supabase.storage
-            .from("shop-images")
-            .createSignedUrl(shopData.avatar_url, 60 * 60 * 24);
-          avatar_signed_url = signedUrl?.signedUrl || null;
-        }
-        setShop({ ...shopData, avatar_signed_url });
-
-        const { data: productsData } = await supabase
-          .from("products")
-          .select("id, name, price, description, image_url, in_stock")
-          .eq("shop_id", shopData.id)
-          .eq("in_stock", true)
-          .order("created_at", { ascending: false });
-
-        const productsWithSigned = await Promise.all(
-          (productsData || []).map(async (p: any) => {
-            let image_signed_url = null;
-            if (p.image_url) {
-              const { data: signed } = await supabase.storage
-                .from("shop-images")
-                .createSignedUrl(p.image_url, 60 * 60 * 24);
-              image_signed_url = signed?.signedUrl || null;
-            }
-            return { ...p, image_signed_url };
-          })
-        );
-        setProducts(productsWithSigned);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadShop();
-  }, [slug]);
-
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
       year: "numeric",
@@ -102,7 +112,6 @@ function ShopPage() {
     });
   };
 
-  // ✅ IMPROVED WhatsApp handler with fallback
   const handleWhatsAppOrder = (productName?: string, productPrice?: number) => {
     if (!shop?.whatsapp_number) {
       toast.error("Shop WhatsApp number not set");
@@ -114,29 +123,17 @@ function ShopPage() {
 
     // If it fails, construct manually
     if (!phone) {
-      // Remove all non-digits
       let raw = shop.whatsapp_number.replace(/\D/g, "");
-      // If it starts with 0, replace with 255 (Tanzania)
-      if (raw.startsWith("0")) {
-        raw = "255" + raw.slice(1);
-      }
-      // If it doesn't start with 255, assume it's a local number without country code
-      if (!raw.startsWith("255") && raw.length >= 9) {
-        raw = "255" + raw;
-      }
-      // Ensure we have at least 9 digits (Tanzania local numbers are 9 digits)
-      if (raw.length >= 9) {
-        phone = "+" + raw;
-      }
+      if (raw.startsWith("0")) raw = "255" + raw.slice(1);
+      if (!raw.startsWith("255") && raw.length >= 9) raw = "255" + raw;
+      if (raw.length >= 9) phone = "+" + raw;
     }
 
-    // Final validation
     if (!phone || phone.length < 10) {
       toast.error("Invalid WhatsApp number. Please update it in settings.");
       return;
     }
 
-    // Remove any extra spaces
     phone = phone.replace(/\s+/g, "");
 
     let message: string;
@@ -163,13 +160,37 @@ function ShopPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
+  // Generate signed URLs for images (avatar and product images)
+  const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
+  const [productsWithSigned, setProductsWithSigned] = useState<(Product & { image_signed_url: string | null })[]>([]);
+
+  useEffect(() => {
+    async function signImages() {
+      if (!shop) return;
+      // Avatar
+      if (shop.avatar_url) {
+        const { data } = await supabase.storage
+          .from("shop-images")
+          .createSignedUrl(shop.avatar_url, 60 * 60 * 24);
+        setAvatarSignedUrl(data?.signedUrl || null);
+      }
+      // Products
+      const signed = await Promise.all(
+        products.map(async (p) => {
+          let image_signed_url = null;
+          if (p.image_url) {
+            const { data } = await supabase.storage
+              .from("shop-images")
+              .createSignedUrl(p.image_url, 60 * 60 * 24);
+            image_signed_url = data?.signedUrl || null;
+          }
+          return { ...p, image_signed_url };
+        })
+      );
+      setProductsWithSigned(signed);
+    }
+    signImages();
+  }, [shop, products]);
 
   if (!shop) {
     return (
@@ -191,8 +212,8 @@ function ShopPage() {
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {shop.avatar_signed_url && (
-              <img src={shop.avatar_signed_url} alt={shop.name} className="size-7 rounded-full object-cover" />
+            {avatarSignedUrl && (
+              <img src={avatarSignedUrl} alt={shop.name} className="size-7 rounded-full object-cover" />
             )}
             <span className="font-semibold truncate">{shop.name}</span>
           </div>
@@ -207,9 +228,9 @@ function ShopPage() {
         <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex justify-center sm:justify-start">
-              {shop.avatar_signed_url ? (
+              {avatarSignedUrl ? (
                 <img
-                  src={shop.avatar_signed_url}
+                  src={avatarSignedUrl}
                   alt={shop.name}
                   className="size-20 rounded-full object-cover border-2 border-primary/20"
                 />
@@ -253,13 +274,13 @@ function ShopPage() {
         {/* Products section */}
         <div>
           <h2 className="text-xl font-semibold mb-4 px-1">Products</h2>
-          {products.length === 0 ? (
+          {productsWithSigned.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground border rounded-2xl">
               No products available yet.
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              {products.map((product) => (
+              {productsWithSigned.map((product) => (
                 <div
                   key={product.id}
                   className="bg-card border border-border rounded-xl overflow-hidden hover:shadow-md transition"
