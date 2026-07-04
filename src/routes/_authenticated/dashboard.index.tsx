@@ -32,9 +32,6 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [referralCode, setReferralCode] = useState<string>("");
-  const [referralBonusApplied, setReferralBonusApplied] = useState(false);
-  const [productLimit, setProductLimit] = useState<number>(FREE_PRODUCT_LIMIT);
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -56,19 +53,6 @@ function Dashboard() {
     setShop(shopRow as any);
 
     if (shopRow) {
-      const { data: shopDetails } = await supabase
-        .from("shops")
-        .select("referral_code, referral_bonus_applied")
-        .eq("id", shopRow.id)
-        .single();
-
-      if (shopDetails) {
-        setReferralCode(shopDetails.referral_code || "");
-        const bonus = shopDetails.referral_bonus_applied === true;
-        setReferralBonusApplied(bonus);
-        setProductLimit(bonus ? 10 : FREE_PRODUCT_LIMIT);
-      }
-
       const { data: prods } = await supabase
         .from("products")
         .select("id,name,price,image_url,in_stock,description")
@@ -91,34 +75,11 @@ function Dashboard() {
   }, []);
 
   const shopUrl = typeof window !== "undefined" && shop ? `${window.location.origin}/${shop.slug}` : "";
-  const referralLink = typeof window !== "undefined" && referralCode ? `${window.location.origin}/auth?ref=${referralCode}` : "";
 
   async function copyLink() {
     if (!shopUrl) return;
     await navigator.clipboard.writeText(shopUrl);
     toast.success("Link copied!");
-  }
-
-  async function copyReferralLink() {
-    if (!referralLink) return;
-    await navigator.clipboard.writeText(referralLink);
-    toast.success("Referral link copied!");
-  }
-
-  async function generateMissingReferralCode() {
-    if (!shop) return;
-    const newCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const { error } = await supabase
-      .from("shops")
-      .update({ referral_code: newCode })
-      .eq("id", shop.id);
-    if (error) {
-      toast.error("Failed to generate referral link");
-    } else {
-      setReferralCode(newCode);
-      toast.success("Referral link created! Share it with friends.");
-      load();
-    }
   }
 
   async function toggleStock(p: Product) {
@@ -205,7 +166,7 @@ function Dashboard() {
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
-        {/* Shop link card */}
+        {/* Green gradient shop link card */}
         <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg shadow-primary/20">
           <p className="text-xs uppercase tracking-wider opacity-80">Your shop link</p>
           <p className="font-mono text-base sm:text-lg mt-1 break-all">{shopUrl}</p>
@@ -221,45 +182,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Referral Section – only show if no bonus yet, otherwise show congratulations */}
-        {referralBonusApplied ? (
-          <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-5 text-center">
-            <p className="text-sm font-semibold text-green-600 mb-2">🎉 Congratulations!</p>
-            <p className="text-xs text-muted-foreground">
-              You have <strong>10 product slots</strong> instead of 5. Enjoy selling!
-            </p>
-          </div>
-        ) : !referralCode ? (
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 text-center">
-            <p className="text-sm font-semibold text-primary mb-2">🎁 Get your referral link</p>
-            <p className="text-xs text-muted-foreground mb-3">
-              Invite a friend. When they sign up, you both get <strong>10 product slots</strong> instead of 5.
-            </p>
-            <Button onClick={generateMissingReferralCode} variant="outline" size="sm">
-              Generate my referral link
-            </Button>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
-            <p className="text-sm font-semibold text-primary mb-2">🎁 Invite a friend, get 10 slots!</p>
-            <p className="text-xs text-muted-foreground mb-3">
-              Share your link. When they sign up, you both get <strong>10 product slots</strong> instead of 5.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono break-all">
-                {referralLink}
-              </div>
-              <Button onClick={copyReferralLink} variant="outline" size="sm">
-                Copy link
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-3">
-              ✅ You have <strong>{productLimit}</strong> free product slots.
-            </p>
-          </div>
-        )}
-
-        {/* Products section – unchanged */}
         {products.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center bg-card">
             <Sparkles className="size-10 text-primary mx-auto mb-3" />
@@ -271,22 +193,19 @@ function Dashboard() {
           </div>
         ) : (
           <>
-            {products.length >= productLimit && (
+            {products.length >= FREE_PRODUCT_LIMIT && (
               <div className="rounded-xl bg-warning/15 border border-warning/40 p-4">
                 <p className="text-sm font-medium text-foreground">
-                  You've hit the free plan limit ({productLimit} products).
+                  You've hit the free plan limit ({FREE_PRODUCT_LIMIT} products).
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {!referralBonusApplied && "Invite a friend to get 10 slots!"}
-                  {referralBonusApplied && "Upgrade to add more — coming soon."}
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Upgrade to add more — coming soon.</p>
               </div>
             )}
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-foreground">
-                Products <span className="text-muted-foreground font-normal">({products.length}/{productLimit})</span>
+                Products <span className="text-muted-foreground font-normal">({products.length}/{FREE_PRODUCT_LIMIT})</span>
               </h2>
-              <Button asChild size="sm" disabled={products.length >= productLimit}>
+              <Button asChild size="sm" disabled={products.length >= FREE_PRODUCT_LIMIT}>
                 <Link to="/dashboard/add"><Plus className="size-4 mr-1" /> Add product</Link>
               </Button>
             </div>
