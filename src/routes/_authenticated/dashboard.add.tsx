@@ -34,7 +34,6 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [productLimit, setProductLimit] = useState<number>(FREE_PRODUCT_LIMIT);
 
   useEffect(() => {
     async function load() {
@@ -46,10 +45,9 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
           return;
         }
 
-        // Get shop with referral bonus info
         const { data: shop, error: shopError } = await supabase
           .from("shops")
-          .select("id, referral_bonus_applied")
+          .select("id")
           .eq("user_id", user.id)
           .maybeSingle();
 
@@ -60,8 +58,6 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
         }
 
         setShopId(shop.id);
-        const limit = shop.referral_bonus_applied ? 10 : FREE_PRODUCT_LIMIT;
-        setProductLimit(limit);
 
         if (mode === "edit") {
           if (!productId) {
@@ -93,8 +89,8 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
             .select("id", { count: "exact", head: true })
             .eq("shop_id", shop.id);
 
-          if (count && count >= limit) {
-            toast.error(`Your plan allows only ${limit} products`);
+          if (count && count >= FREE_PRODUCT_LIMIT) {
+            toast.error(`Free plan limited to ${FREE_PRODUCT_LIMIT} products`);
             navigate({ to: "/dashboard" });
             return;
           }
@@ -216,7 +212,6 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
           <Label>Photo</Label>
           <div className="mt-1.5">
             {imagePreview ? (
-              // New image preview (blob URL)
               <div className="relative w-full aspect-square max-w-xs rounded-xl overflow-hidden bg-muted">
                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                 <button
@@ -228,7 +223,6 @@ export function ProductForm({ mode, productId }: { mode: "add" | "edit"; product
                 </button>
               </div>
             ) : imagePath ? (
-              // Existing image: use ProductImage component for signed URL
               <div className="relative w-full aspect-square max-w-xs rounded-xl overflow-hidden bg-muted">
                 <ProductImage path={imagePath} className="w-full h-full object-cover" />
                 <button
