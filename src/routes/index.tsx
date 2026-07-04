@@ -65,6 +65,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Create your free shop in 60 seconds. Share on WhatsApp. Get orders today." },
       { property: "og:title", content: "Dukalink — Uza zaidi. Haraka zaidi." },
       { property: "og:description", content: "Create your free shop in 60 seconds. Share on WhatsApp. Get orders today." },
+      // ✅ Google Search Console verification meta tag
+      { name: "google-site-verification", content: "--Ufk5ks99tgGhtBbi0aI6Xrg01DaHTusyM65gn-VFA" },
     ],
   }),
   component: Landing,
