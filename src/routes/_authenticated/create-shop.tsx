@@ -11,19 +11,6 @@ import { checkSlug } from "@/lib/shop.functions";
 import { ArrowLeft, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { sanitize, slugError } from "@/lib/dukalink";
 
-function generateReferralCode(): string {
-  return Math.random().toString(36).substring(2, 10).toUpperCase();
-}
-
-async function getShopIdByReferralCode(code: string): Promise<string | null> {
-  const { data } = await supabase
-    .from("shops")
-    .select("id")
-    .eq("referral_code", code)
-    .maybeSingle();
-  return data?.id || null;
-}
-
 export const Route = createFileRoute("/_authenticated/create-shop")({
   head: () => ({ meta: [{ title: "Create Shop — Dukalink" }] }),
   component: CreateShopPage,
@@ -92,31 +79,17 @@ function CreateShopPage() {
         return;
       }
 
-      // Read referral code from user_metadata (set during signup)
-      const refCode = userData.user.user_metadata?.referral_code as string | undefined;
-      let referredById: string | null = null;
-      let isReferred = false;
-
-      if (refCode) {
-        referredById = await getShopIdByReferralCode(refCode);
-        isReferred = !!referredById;
-      }
-
-      const referralCode = isReferred ? null : generateReferralCode();
-
+      // Insert shop – no referral columns
       const { error } = await supabase.from("shops").insert({
         user_id: userData.user.id,
         name: sanitize(name, 80),
         description: sanitize(description, 500) || null,
         location: sanitize(location, 80) || null,
         slug: slug,
-        referral_code: referralCode,
-        referred_by: referredById,
-        referral_bonus_applied: isReferred,
       });
 
       if (error) {
-        console.error("Insert error:", error);
+        console.error("Shop creation error:", error);
         toast.error("Could not create shop: " + error.message);
         return;
       }
