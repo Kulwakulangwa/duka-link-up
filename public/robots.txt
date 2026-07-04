@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://dukalinkup.royotechtz.cc/sitemap.xml
