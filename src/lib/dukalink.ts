@@ -4,7 +4,7 @@ export const RESERVED_SLUGS = new Set([
   "www", "about", "terms", "privacy", "help", "support", "static", "assets",
 ]);
 
-export const FREE_PRODUCT_LIMIT = 5;
+export const FREE_PRODUCT_LIMIT = 10; // Changed from 5
 
 export function slugify(input: string): string {
   return input
